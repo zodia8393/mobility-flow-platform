@@ -1,0 +1,30 @@
+version: 2
+
+sources:
+  - name: raw
+    description: "Spark가 event_id 기준으로 멱등 적재한 교통 관측 이벤트"
+    schema: raw
+    tables:
+      - name: traffic_observation
+        description: "공개 synthetic schema contract와 검증을 통과한 도로 구간 관측 이벤트"
+        loaded_at_field: loaded_at
+        freshness:
+          warn_after: {count: 15, period: minute}
+          error_after: {count: 30, period: minute}
+        columns:
+          - name: event_id
+            tests: [not_null, unique]
+          - name: segment_id
+            tests: [not_null]
+          - name: observed_at
+            tests: [not_null]
+          - name: source_system
+            tests:
+              - accepted_values:
+                  arguments:
+                    values: ["TMAP", "TCS", "VDS", "GPS"]
+          - name: congestion_level
+            tests:
+              - accepted_values:
+                  arguments:
+                    values: ["SEVERE", "CONGESTED", "SLOW", "SMOOTH"]

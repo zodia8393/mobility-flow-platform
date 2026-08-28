@@ -1,0 +1,12 @@
+{
+  "segment_id": "link_id",
+  "road_name": "road_label",
+  "latitude": "lat",
+  "longitude": "lon",
+  "observed_at": "measure_time",
+  "segment_length_km": "length_km",
+  "speed_kph": "avg_speed",
+  "reference_speed_kph": "reference_speed",
+  "traffic_volume": "volume_15m",
+  "travel_time_seconds": "travel_seconds"
+}

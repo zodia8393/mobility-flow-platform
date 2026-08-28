@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MobilityFlow DataOps Control Room</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">
+      <span class="brand-mark">MO</span>
+      <span><strong>MobilityFlow DataOps</strong><small>Traffic Data Platform Control Room</small></span>
+    </a>
+    <div class="header-meta">
+      <span class="scope-badge">PUBLIC DEMO · SYNTHETIC DATA</span>
+      <span id="last-refresh">업데이트 대기</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div>
+        <p class="eyebrow">AWS-READY · KAFKA · SPARK · AIRFLOW · DBT</p>
+        <h1>교통 원천의 누락과 정체를<br><span>15분 안에 발견하는</span> 데이터 플랫폼</h1>
+        <p class="hero-copy">기존 TMAP·TCS·VDS·GPS 처리 경험을 Cloud·Airflow·Spark·dbt 운영 구조로 확장했습니다.</p>
+      </div>
+      <div class="status-card">
+        <div class="pulse" id="status-pulse"></div>
+        <div>
+          <small>PLATFORM STATUS</small>
+          <strong id="platform-status">LOADING</strong>
+          <span id="last-run-id">첫 실행을 기다리는 중</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel continuity-panel">
+      <div class="panel-heading">
+        <div><p class="eyebrow">PORTFOLIO CONTINUITY</p><h2>교통·공간 데이터 실무에서 출발한 운영화 프로젝트</h2></div>
+        <span class="contract">실무 기준선과 공개 synthetic 운영 증거를 분리</span>
+      </div>
+      <div class="baseline-grid">
+        <div><strong>93,432,415</strong><span>TMAP session rows</span></div>
+        <div><strong>14 · 15.4 GiB</strong><span>7일 gzip full audit</span></div>
+        <div><strong>10 gates</strong><span>row · key · date · hash · privacy</span></div>
+        <div><strong>197 / run</strong><span>보고 산출물 재생성</span></div>
+      </div>
+      <p class="baseline-note">위 수치는 기존 포트폴리오 evidence ledger의 실무 기준선입니다. 아래 실시간 화면은 같은 데이터 흐름을 비식별 synthetic schema로 재현한 공개 운영 demo입니다.</p>
+    </section>
+
+    <section class="kpi-grid">
+      <article class="kpi-card"><span>Warehouse Rows</span><strong id="raw-rows">—</strong><small>idempotent upsert</small></article>
+      <article class="kpi-card"><span>Data Freshness</span><strong id="freshness">—</strong><small>SLO ≤ 15 min</small></article>
+      <article class="kpi-card"><span>Active Segments</span><strong id="segment-count">—</strong><small>TMAP · TCS · VDS · GPS</small></article>
+      <article class="kpi-card risk"><span>Congested Segments</span><strong id="congested">—</strong><small>severe / congested</small></article>
+      <article class="kpi-card"><span>DQ / dbt</span><strong id="dbt-status">—</strong><small>contract + tests</small></article>
+    </section>
+
+    <section class="panel pipeline-panel">
+      <div class="panel-heading">
+        <div><p class="eyebrow">END-TO-END LINEAGE</p><h2>교통 원천 → 검증 가능한 분석·보고 Mart</h2></div>
+        <div id="service-summary" class="service-summary"></div>
+      </div>
+      <div class="pipeline">
+        <div class="pipeline-node"><i>01</i><b>Traffic Sources</b><span>TMAP · TCS · VDS · GPS</span></div><em>→</em>
+        <div class="pipeline-node" data-service="kafka"><i>02</i><b>File + Kafka</b><span>mapping · 3 partitions</span></div><em>→</em>
+        <div class="pipeline-node" data-service="object_store"><i>03</i><b>Bronze</b><span>Parquet + DLQ</span></div><em>→</em>
+        <div class="pipeline-node"><i>04</i><b>Spark</b><span>dedup + late</span></div><em>→</em>
+        <div class="pipeline-node" data-service="postgres"><i>05</i><b>dbt Mart</b><span>tests + lineage</span></div><em>→</em>
+        <div class="pipeline-node accent"><i>06</i><b>Control Room</b><span>SLO + replay</span></div>
+      </div>
+    </section>
+
+    <section class="content-grid">
+      <article class="panel map-panel">
+        <div class="panel-heading">
+          <div><p class="eyebrow">TRAFFIC QUALITY MAP</p><h2>서울 주요 도로 구간 혼잡 지도</h2></div>
+          <div class="legend"><span class="healthy">원활</span><span class="low">서행</span><span class="critical">정체</span></div>
+        </div>
+        <svg id="segment-map" viewBox="0 0 760 360" role="img" aria-label="도로 구간 혼잡 지도"></svg>
+      </article>
+
+      <article class="panel alerts-panel">
+        <div class="panel-heading"><div><p class="eyebrow">QUALITY ACTION QUEUE</p><h2>정체·지연 점검 우선순위</h2></div></div>
+        <div id="alerts" class="alerts"><p class="empty">데이터를 불러오는 중입니다.</p></div>
+      </article>
+    </section>
+
+    <section class="panel delivery-panel">
+      <div class="panel-heading">
+        <div><p class="eyebrow">DELIVERY READINESS</p><h2>이 산출물은 지금 재사용·납품 가능한가?</h2></div>
+        <a class="manifest-link" href="/api/delivery/latest" target="_blank" rel="noreferrer">JSON manifest →</a>
+      </div>
+      <div class="delivery-body">
+        <div class="delivery-status"><small>LATEST DELIVERY</small><strong id="delivery-status">WAITING</strong><span id="delivery-run">성공 run 대기</span></div>
+        <div id="delivery-checks" class="delivery-checks"><span>품질 gate를 불러오는 중입니다.</span></div>
+      </div>
+    </section>
+
+    <section class="panel runs-panel">
+      <div class="panel-heading">
+        <div><p class="eyebrow">REPLAYABLE OPERATIONS</p><h2>최근 Pipeline 실행</h2></div>
+        <span class="contract">at-least-once ingestion · event_id dedup · object manifest</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Run</th><th>Status</th><th>Input</th><th>Accepted</th><th>Dedup</th><th>Late</th><th>Duration</th><th>dbt</th></tr></thead>
+          <tbody id="runs"><tr><td colspan="8">실행 이력이 없습니다.</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer>
+      <span>MobilityFlow DataOps · 실무 evidence와 공개 demo의 범위를 분리</span>
+      <span><a href="/docs">OpenAPI</a> · <a href="http://localhost:18080">Airflow</a> · <a href="http://localhost:13000">Grafana</a></span>
+    </footer>
+  </main>
+  <script src="/assets/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+{
+  "verified_at": "2026-08-28T06:40:37Z",
+  "environment": {
+    "mode": "Docker local",
+    "spark_master": "local[2]",
+    "data": "privacy-safe synthetic TMAP/TCS/VDS/GPS traffic observations"
+  },
+  "orchestrator": "Apache Airflow 2.10.5",
+  "run_id": "manual__2026-08-28T06-40-00-00-00",
+  "result": {
+    "status": "SUCCESS",
+    "source_objects": 2,
+    "input_rows": 984,
+    "accepted_rows": 942,
+    "duplicates_removed": 42,
+    "late_rows": 43,
+    "silver_objects": 4,
+    "spark_job_duration_seconds": 3.867,
+    "dbt_data_tests_passed": 27,
+    "dbt_source_freshness": "PASS"
+  },
+  "claim_boundary": "Local reproducibility evidence; not a distributed or AWS throughput benchmark."
+}

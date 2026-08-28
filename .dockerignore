@@ -1,0 +1,10 @@
+.git
+.venv
+__pycache__
+.pytest_cache
+.ruff_cache
+airflow/logs
+dbt/target
+dbt/logs
+infra/terraform/.terraform
+docs/evidence/generated

@@ -1,0 +1,53 @@
+{
+  "annotations": {"list": []},
+  "editable": false,
+  "graphTooltip": 1,
+  "panels": [
+    {
+      "type": "stat", "title": "Pipeline Freshness", "id": 1,
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+      "fieldConfig": {"defaults": {"unit": "s", "thresholds": {"steps": [{"color": "green"}, {"color": "orange", "value": 900}, {"color": "red", "value": 1800}]}}},
+      "targets": [{"expr": "mobility_pipeline_freshness_seconds", "refId": "A"}]
+    },
+    {
+      "type": "stat", "title": "Warehouse Rows", "id": 2,
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+      "targets": [{"expr": "mobility_warehouse_raw_rows", "refId": "A"}]
+    },
+    {
+      "type": "stat", "title": "Congested Road Segments", "id": 3,
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+      "fieldConfig": {"defaults": {"thresholds": {"steps": [{"color": "green"}, {"color": "red", "value": 1}]}}},
+      "targets": [{"expr": "mobility_congested_segments", "refId": "A"}]
+    },
+    {
+      "type": "stat", "title": "dbt Quality Gate", "id": 4,
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+      "fieldConfig": {"defaults": {"mappings": [{"type": "value", "options": {"0": {"text": "FAIL", "color": "red"}, "1": {"text": "PASS", "color": "green"}}}]}},
+      "targets": [{"expr": "mobility_dbt_test_success", "refId": "A"}]
+    },
+    {
+      "type": "timeseries", "title": "Bronze Throughput", "id": 5,
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+      "targets": [
+        {"expr": "rate(mobility_bronze_received_total[1m])", "legendFormat": "received/s", "refId": "A"},
+        {"expr": "rate(mobility_bronze_accepted_total[1m])", "legendFormat": "accepted/s", "refId": "B"},
+        {"expr": "rate(mobility_bronze_dlq_total[1m])", "legendFormat": "dlq/s", "refId": "C"}
+      ]
+    },
+    {
+      "type": "timeseries", "title": "Spark Job Duration", "id": 6,
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+      "targets": [{"expr": "histogram_quantile(0.95, sum(rate(mobility_spark_job_duration_seconds_bucket[5m])) by (le))", "legendFormat": "p95", "refId": "A"}]
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 41,
+  "tags": ["mobility", "data-engineering", "slo"],
+  "templating": {"list": []},
+  "time": {"from": "now-1h", "to": "now"},
+  "timezone": "browser",
+  "title": "MobilityFlow Traffic DataOps",
+  "uid": "mobility-flow-ops",
+  "version": 1
+}

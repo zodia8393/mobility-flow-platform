@@ -1,0 +1,12 @@
+version: 2
+
+models:
+  - name: stg_traffic_observation
+    description: "분석 모델의 단일 진입점: 타입과 명칭을 보존한 validated event"
+    columns:
+      - name: event_id
+        tests: [not_null, unique]
+      - name: segment_id
+        tests: [not_null]
+      - name: speed_index
+        tests: [not_null]

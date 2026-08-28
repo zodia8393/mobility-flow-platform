@@ -1,0 +1,67 @@
+version: 2
+
+models:
+  - name: dim_road_segment
+    description: "도로 구간 최신 속성 Dimension"
+    columns:
+      - name: segment_id
+        tests: [not_null, unique]
+
+  - name: fct_traffic_observation
+    description: "event_id grain의 교통 관측 증분 Fact"
+    columns:
+      - name: event_id
+        tests: [not_null, unique]
+      - name: segment_id
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_road_segment')
+                field: segment_id
+      - name: source_system
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["TMAP", "TCS", "VDS", "GPS"]
+
+  - name: mart_segment_latest
+    description: "도로 구간별 최신 상태 Snapshot"
+    columns:
+      - name: segment_id
+        tests: [not_null, unique]
+      - name: congestion_level
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["SEVERE", "CONGESTED", "SLOW", "SMOOTH"]
+
+  - name: mart_congestion_alerts
+    description: "운영자가 바로 확인할 정체·원천 품질 Queue"
+    columns:
+      - name: segment_id
+        tests: [not_null, unique]
+      - name: recommended_action
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["VERIFY_SOURCE_AND_AGGREGATION", "REVIEW_CONGESTION", "MONITOR_TREND"]
+
+  - name: mart_hourly_traffic_health
+    description: "시간대별 속도·혼잡·지연 SLO Mart"
+    columns:
+      - name: observed_hour
+        tests: [not_null, unique]
+
+exposures:
+  - name: mobility_traffic_control_room
+    type: dashboard
+    maturity: high
+    url: http://localhost:18000
+    description: "도로 정체, freshness, 품질 gate와 pipeline 실행 상태를 제공하는 운영 Dashboard"
+    depends_on:
+      - ref('mart_congestion_alerts')
+      - ref('mart_hourly_traffic_health')
+    owner:
+      name: Hyeongjun Cho
+      email: zodia8393@users.noreply.github.com

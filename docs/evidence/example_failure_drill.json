@@ -1,0 +1,27 @@
+{
+  "verified_at": "2026-08-28T06:42:16Z",
+  "drill": "bronze-writer outage -> Kafka backlog -> recovery -> immediate replay",
+  "buffered_events": 1200,
+  "recovery_seconds": 17.0,
+  "dlq_total": 56,
+  "first_transform": {
+    "status": "TRANSFORMED",
+    "source_objects": 3,
+    "input_rows": 1144,
+    "accepted_rows": 1040,
+    "duplicates_removed": 104,
+    "late_rows": 113,
+    "job_duration_seconds": 0.757
+  },
+  "immediate_replay": {
+    "status": "NO_DATA",
+    "input_rows": 0,
+    "accepted_rows": 0
+  },
+  "assertions": {
+    "backlog_recovered": true,
+    "invalid_events_quarantined": true,
+    "replay_is_idempotent": true
+  },
+  "passed": true
+}

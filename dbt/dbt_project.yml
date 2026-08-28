@@ -1,0 +1,18 @@
+name: mobility_flow
+version: "1.0.0"
+config-version: 2
+
+profile: mobility_flow
+model-paths: ["models"]
+test-paths: ["tests"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+models:
+  mobility_flow:
+    staging:
+      +schema: staging
+      +materialized: view
+    marts:
+      +schema: analytics
+      +materialized: table
