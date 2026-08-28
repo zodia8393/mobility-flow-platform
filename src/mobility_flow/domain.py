@@ -6,6 +6,7 @@ class CongestionLevel(StrEnum):
     CONGESTED = "CONGESTED"
     SLOW = "SLOW"
     SMOOTH = "SMOOTH"
+    UNKNOWN = "UNKNOWN"
 
 
 def classify_congestion(speed_kph: float, reference_speed_kph: float) -> CongestionLevel:

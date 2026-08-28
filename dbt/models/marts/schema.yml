@@ -23,7 +23,7 @@ models:
         tests:
           - accepted_values:
               arguments:
-                values: ["TMAP", "TCS", "VDS", "GPS"]
+                values: ["TMAP", "TCS", "VDS", "GPS", "SEOUL_TOPIS"]
 
   - name: mart_segment_latest
     description: "도로 구간별 최신 상태 Snapshot"
@@ -34,7 +34,7 @@ models:
         tests:
           - accepted_values:
               arguments:
-                values: ["SEVERE", "CONGESTED", "SLOW", "SMOOTH"]
+                values: ["SEVERE", "CONGESTED", "SLOW", "SMOOTH", "UNKNOWN"]
 
   - name: mart_congestion_alerts
     description: "운영자가 바로 확인할 정체·원천 품질 Queue"

@@ -32,7 +32,7 @@ def _update_run(run_id: str, payload: dict[str, object]) -> None:
 
 @dag(
     dag_id="mobility_flow_15m",
-    description="Traffic bronze → Spark silver → dbt marts with quality and freshness gates",
+    description="Seoul live traffic → Spark silver → dbt marts with quality gates",
     schedule="*/15 * * * *",
     start_date=datetime(2026, 1, 1),
     catchup=False,
@@ -43,27 +43,42 @@ def _update_run(run_id: str, payload: dict[str, object]) -> None:
         "retry_delay": timedelta(minutes=1),
         "execution_timeout": timedelta(minutes=12),
     },
-    tags=["traffic", "mobility", "spark", "dbt", "data-quality"],
+    tags=["seoul-open-data", "traffic", "spark", "dbt", "data-quality"],
     doc_md="""
-    ### MobilityFlow Traffic DataOps — 15-minute pipeline
-    1. Wait for a bronze Parquet object.
-    2. Trigger idempotent Spark deduplication, late-event and congestion classification.
-    3. Build and test dbt marts, then enforce source freshness.
-    4. Publish a run manifest to the Control Room.
+    ### MobilityFlow — Seoul road traffic pipeline
+    1. Fetch current road traffic for configured Seoul citydata areas.
+    2. Preserve the source response and write canonical Bronze Parquet.
+    3. Trigger idempotent Spark deduplication and official congestion mapping.
+    4. Build and test dbt marts, then publish a run manifest to the Control Room.
 
-    Kafka offsets are committed only after bronze upload. Spark uses an object manifest and
-    `event_id` upsert, so a retry can safely replay an interrupted batch.
+    The API response is preserved before canonical Bronze creation. Spark uses an object
+    manifest and `event_id` upsert, so a retry can safely replay an interrupted batch.
     """,
 )
 def mobility_flow_pipeline() -> None:
+    @task(retries=2, retry_delay=timedelta(seconds=30))
+    def sync_seoul_live_traffic() -> dict[str, object]:
+        response = requests.post(
+            f"{CONTROL_API_URL}/ops/sources/seoul-citydata/sync",
+            json={"areas": None},
+            headers={"X-Ops-Token": OPS_TOKEN},
+            timeout=120,
+        )
+        response.raise_for_status()
+        return response.json()
+
     @task(retries=3, retry_delay=timedelta(seconds=20))
-    def wait_for_bronze() -> dict[str, object]:
-        response = requests.get(f"{SPARK_RUNNER_URL}/bronze/stats", timeout=10)
+    def wait_for_bronze(sync_report: dict[str, object]) -> dict[str, object]:
+        response = requests.get(
+            f"{SPARK_RUNNER_URL}/bronze/stats",
+            params={"prefix": "bronze/seoul_citydata/"},
+            timeout=10,
+        )
         response.raise_for_status()
         stats = response.json()
         if stats["objects"] < 1:
             raise RuntimeError("No bronze object is available yet")
-        return stats
+        return {**stats, "sync_id": sync_report["sync_id"]}
 
     @task
     def spark_transform(_bronze_stats: dict[str, object]) -> dict[str, object]:
@@ -71,7 +86,11 @@ def mobility_flow_pipeline() -> None:
         run_id = _safe_run_id(context["dag_run"].run_id)
         response = requests.post(
             f"{SPARK_RUNNER_URL}/jobs/bronze-to-silver",
-            json={"run_id": run_id, "force_reprocess": False},
+            json={
+                "run_id": run_id,
+                "force_reprocess": False,
+                "prefix": "bronze/seoul_citydata/",
+            },
             timeout=600,
         )
         response.raise_for_status()
@@ -132,7 +151,11 @@ def mobility_flow_pipeline() -> None:
         }
 
     @task
-    def publish_success(transform: dict[str, object], quality: dict[str, object]) -> None:
+    def publish_success(
+        transform: dict[str, object],
+        quality: dict[str, object],
+        sync_report: dict[str, object],
+    ) -> None:
         if quality["status"] == "SKIPPED":
             return
         _update_run(
@@ -143,14 +166,21 @@ def mobility_flow_pipeline() -> None:
                 "details": {
                     "orchestrator": "Apache Airflow",
                     "quality_gate": "dbt build + source freshness",
+                    "source": "서울시 실시간 도시데이터·도로소통",
+                    "source_sync_id": sync_report["sync_id"],
+                    "source_rows": sync_report["input_rows"],
+                    "source_areas": [
+                        area["area_name"] for area in sync_report.get("areas", [])
+                    ],
                 },
             },
         )
 
-    bronze = wait_for_bronze()
+    source_sync = sync_seoul_live_traffic()
+    bronze = wait_for_bronze(source_sync)
     transformed = spark_transform(bronze)
     quality = dbt_quality_gate(transformed)
-    publish_success(transformed, quality)
+    publish_success(transformed, quality, source_sync)
 
 
 mobility_flow_pipeline()

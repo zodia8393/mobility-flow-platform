@@ -2,13 +2,15 @@
   config(
     materialized='incremental',
     unique_key='event_id',
-    on_schema_change='fail'
+    on_schema_change='sync_all_columns'
   )
 }}
 
 select
     event_id,
     segment_id,
+    area_code,
+    area_name,
     observed_at,
     ingested_at,
     source_system,
@@ -18,6 +20,8 @@ select
     reference_speed_kph,
     traffic_volume,
     travel_time_seconds,
+    source_congestion_level,
+    source_payload_sha256,
     speed_index,
     congestion_level,
     is_late,

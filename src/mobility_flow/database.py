@@ -40,6 +40,18 @@ CREATE INDEX IF NOT EXISTS idx_traffic_observation_observed_at
 CREATE INDEX IF NOT EXISTS idx_traffic_observation_segment_observed
     ON raw.traffic_observation (segment_id, observed_at DESC);
 
+ALTER TABLE raw.traffic_observation ADD COLUMN IF NOT EXISTS area_code TEXT;
+ALTER TABLE raw.traffic_observation ADD COLUMN IF NOT EXISTS area_name TEXT;
+ALTER TABLE raw.traffic_observation ADD COLUMN IF NOT EXISTS start_latitude DOUBLE PRECISION;
+ALTER TABLE raw.traffic_observation ADD COLUMN IF NOT EXISTS start_longitude DOUBLE PRECISION;
+ALTER TABLE raw.traffic_observation ADD COLUMN IF NOT EXISTS end_latitude DOUBLE PRECISION;
+ALTER TABLE raw.traffic_observation ADD COLUMN IF NOT EXISTS end_longitude DOUBLE PRECISION;
+ALTER TABLE raw.traffic_observation ADD COLUMN IF NOT EXISTS source_congestion_level TEXT;
+ALTER TABLE raw.traffic_observation ADD COLUMN IF NOT EXISTS source_payload_sha256 TEXT;
+ALTER TABLE raw.traffic_observation ALTER COLUMN reference_speed_kph DROP NOT NULL;
+ALTER TABLE raw.traffic_observation ALTER COLUMN traffic_volume DROP NOT NULL;
+ALTER TABLE raw.traffic_observation ALTER COLUMN speed_index DROP NOT NULL;
+
 CREATE TABLE IF NOT EXISTS ops.object_manifest (
     object_key TEXT PRIMARY KEY,
     etag TEXT NOT NULL,
@@ -72,8 +84,14 @@ TRAFFIC_COLUMNS = (
     "trace_id",
     "segment_id",
     "road_name",
+    "area_code",
+    "area_name",
     "latitude",
     "longitude",
+    "start_latitude",
+    "start_longitude",
+    "end_latitude",
+    "end_longitude",
     "observed_at",
     "ingested_at",
     "source_system",
@@ -83,6 +101,8 @@ TRAFFIC_COLUMNS = (
     "reference_speed_kph",
     "traffic_volume",
     "travel_time_seconds",
+    "source_congestion_level",
+    "source_payload_sha256",
     "schema_version",
     "is_late",
     "speed_index",

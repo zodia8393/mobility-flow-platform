@@ -15,7 +15,14 @@ from prometheus_client import Gauge, Histogram, make_asgi_app
 
 from mobility_flow.config import get_settings
 from mobility_flow.database import connect, ensure_schema, finish_pipeline_run
-from mobility_flow.schemas import PipelineRunUpdate
+from mobility_flow.schemas import PipelineRunUpdate, SeoulSyncRequest
+from mobility_flow.seoul_citydata import (
+    SEOUL_CITYDATA_DATASET_URL,
+    SEOUL_CITYDATA_LICENSE,
+    SEOUL_CITYDATA_SOURCE_URL,
+    SeoulCityDataError,
+    sync_seoul_citydata,
+)
 from mobility_flow.storage import ObjectStore
 
 LOGGER = logging.getLogger(__name__)
@@ -43,7 +50,7 @@ async def lifespan(_app: FastAPI) -> Any:
 app = FastAPI(
     title="MobilityFlow Traffic DataOps API",
     version="0.1.0",
-    description="Operational view of traffic freshness, quality, congestion and replay evidence.",
+    description="Operational view of Seoul public real-time road traffic ingestion and quality.",
     lifespan=lifespan,
 )
 app.mount("/assets", StaticFiles(directory=STATIC_DIR), name="assets")
@@ -180,14 +187,17 @@ def overview() -> dict[str, Any]:
             """
             WITH latest AS (
                 SELECT DISTINCT ON (segment_id)
-                       segment_id, observed_at, congestion_level, source_system
+                       segment_id, area_code, observed_at, congestion_level, source_system
                 FROM raw.traffic_observation
+                WHERE source_system = 'SEOUL_TOPIS'
                 ORDER BY segment_id, observed_at DESC
             )
             SELECT
-                (SELECT COUNT(*) FROM raw.traffic_observation) AS raw_rows,
+                (SELECT COUNT(*) FROM raw.traffic_observation
+                 WHERE source_system = 'SEOUL_TOPIS') AS raw_rows,
                 COUNT(*) AS segment_count,
                 COUNT(DISTINCT source_system) AS source_count,
+                COUNT(DISTINCT area_code) AS area_count,
                 COUNT(*) FILTER (
                     WHERE congestion_level IN ('SEVERE', 'CONGESTED')
                 ) AS congested_segments,
@@ -230,12 +240,14 @@ def overview() -> dict[str, Any]:
         "raw_rows": raw_rows,
         "segment_count": traffic["segment_count"] or 0,
         "source_count": traffic["source_count"] or 0,
+        "area_count": traffic["area_count"] or 0,
         "congested_segments": congested_segments,
         "freshness_seconds": round(freshness_seconds, 1) if freshness_seconds is not None else None,
         "latest_observed_at": latest,
         "last_run": last_run,
         "last_successful_run": last_successful_run,
-        "synthetic_data": True,
+        "live_data": bool(raw_rows),
+        "data_provider": "서울특별시·서울 열린데이터광장",
     }
 
 
@@ -245,30 +257,60 @@ def segments() -> list[dict[str, Any]]:
         return connection.execute(
             """
             SELECT DISTINCT ON (segment_id)
-                   segment_id, road_name, latitude, longitude, observed_at,
+                   segment_id, road_name, area_code, area_name,
+                   latitude, longitude, start_latitude, start_longitude,
+                   end_latitude, end_longitude, observed_at,
                    source_system, vehicle_type, segment_length_km,
                    speed_kph, reference_speed_kph, traffic_volume,
-                   travel_time_seconds, speed_index, congestion_level, is_late
+                   travel_time_seconds, speed_index, congestion_level, is_late,
+                   source_payload_sha256
             FROM raw.traffic_observation
+            WHERE source_system = 'SEOUL_TOPIS'
             ORDER BY segment_id, observed_at DESC
             """
         ).fetchall()
 
 
-@app.get("/api/portfolio-baseline")
-def portfolio_baseline() -> dict[str, Any]:
+@app.get("/api/source")
+def source_status() -> dict[str, Any]:
+    with connect(SETTINGS) as connection:
+        row = connection.execute(
+            """
+            WITH latest_snapshot AS (
+                SELECT MAX(observed_at) AS observed_at
+                FROM raw.traffic_observation
+                WHERE source_system = 'SEOUL_TOPIS'
+            )
+            SELECT
+                latest_snapshot.observed_at AS snapshot_at,
+                MAX(item.ingested_at) AS retrieved_at,
+                COUNT(item.event_id) AS records,
+                COUNT(DISTINCT item.segment_id) AS unique_links,
+                ARRAY_AGG(DISTINCT item.area_name ORDER BY item.area_name)
+                    FILTER (WHERE item.area_name IS NOT NULL) AS areas,
+                COUNT(*) FILTER (WHERE item.congestion_level = 'CONGESTED') AS congested,
+                COUNT(*) FILTER (WHERE item.congestion_level = 'SLOW') AS slow,
+                COUNT(*) FILTER (WHERE item.congestion_level = 'SMOOTH') AS smooth,
+                ARRAY_AGG(
+                    DISTINCT item.source_payload_sha256
+                    ORDER BY item.source_payload_sha256
+                ) FILTER (WHERE item.source_payload_sha256 IS NOT NULL) AS payload_sha256s
+            FROM latest_snapshot
+            LEFT JOIN raw.traffic_observation item
+              ON item.observed_at = latest_snapshot.observed_at
+             AND item.source_system = 'SEOUL_TOPIS'
+            GROUP BY latest_snapshot.observed_at
+            """
+        ).fetchone()
     return {
-        "scope": "기존 포트폴리오 교통·공간 데이터 실무의 검증된 기준선",
-        "period": "TMAP 7일 audit",
-        "session_rows": 93_432_415,
-        "compressed_gib": 15.399,
-        "source_files": 14,
-        "quality_gates": 10,
-        "artifacts_per_run": 197,
-        "boundary": (
-            "실무 수치는 evidence ledger 기준이며, 현재 공개 Control Room 데이터는 "
-            "원천 schema를 모사한 synthetic fixture입니다."
-        ),
+        "provider": "서울특별시·서울 열린데이터광장",
+        "dataset": "서울시 실시간 도시데이터·도로소통",
+        "dataset_url": SEOUL_CITYDATA_DATASET_URL,
+        "source_url": SEOUL_CITYDATA_SOURCE_URL,
+        "license": SEOUL_CITYDATA_LICENSE,
+        "update_interval_minutes": 5,
+        "api_key_configured": bool(SETTINGS.seoul_open_data_api_key),
+        **(row or {}),
     }
 
 
@@ -323,7 +365,35 @@ def services() -> dict[str, dict[str, str]]:
     except Exception as exc:
         LOGGER.warning("Kafka health check failed: %s", exc)
         result["kafka"] = {"status": "DOWN", "role": "Redpanda"}
+    try:
+        source = source_status()
+        if source.get("records"):
+            result["seoul_open_data"] = {"status": "UP", "role": "Live source"}
+        elif SETTINGS.seoul_open_data_api_key:
+            result["seoul_open_data"] = {"status": "WAITING", "role": "Live source"}
+        else:
+            result["seoul_open_data"] = {"status": "NOT_CONFIGURED", "role": "Live source"}
+    except Exception as exc:
+        LOGGER.warning("Seoul source status check failed: %s", exc)
+        result["seoul_open_data"] = {"status": "DOWN", "role": "Live source"}
     return result
+
+
+@app.post("/ops/sources/seoul-citydata/sync")
+def sync_seoul_source(
+    request: SeoulSyncRequest,
+    x_ops_token: Annotated[str | None, Header()] = None,
+) -> dict[str, Any]:
+    if x_ops_token != SETTINGS.ops_token:
+        raise HTTPException(status_code=401, detail="invalid operations token")
+    try:
+        return sync_seoul_citydata(
+            areas=tuple(request.areas) if request.areas else None,
+            settings=SETTINGS,
+            store=STORE,
+        )
+    except SeoulCityDataError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 @app.patch("/ops/runs/{run_id}")

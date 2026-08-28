@@ -1,0 +1,51 @@
+{
+  "status": "VALIDATED",
+  "sync_id": "seoul-72e2aae32039587e3367",
+  "source": "서울시 실시간 도시데이터·도로소통",
+  "dataset_url": "https://data.seoul.go.kr/dataList/OA-21285/A/1/datasetView.do",
+  "source_url": "https://data.seoul.go.kr/SeoulRtd/",
+  "license": "서울특별시 공공데이터 이용정책·공공누리 제1유형(출처표시)",
+  "retrieved_at": "2026-08-28T09:22:04.879457+00:00",
+  "snapshot_at": "2026-08-28T09:20:00+00:00",
+  "areas": [
+    {
+      "area_code": "POI009",
+      "area_name": "광화문·덕수궁",
+      "source_rows": 159,
+      "accepted_rows": 159,
+      "rejected_rows": 0,
+      "payload_sha256": "f2bc5dee30cec6ad2ed0f4f95c201e60857d4e0cf84cffa2077530fda455e8cd"
+    },
+    {
+      "area_code": "POI001",
+      "area_name": "강남 MICE 관광특구",
+      "source_rows": 15,
+      "accepted_rows": 15,
+      "rejected_rows": 0,
+      "payload_sha256": "672c2fbb2d5d937bccb1b300df51bfad7ef75994f9f26f5c18210974a90b2a38"
+    },
+    {
+      "area_code": "POI072",
+      "area_name": "여의도",
+      "source_rows": 281,
+      "accepted_rows": 281,
+      "rejected_rows": 0,
+      "payload_sha256": "0a4ec5492e54ad5cbac252611f90b26512862754cb481f3252f0749ef39c90c7"
+    }
+  ],
+  "input_rows": 455,
+  "accepted_rows": 455,
+  "rejected_rows": 0,
+  "congestion_counts": {
+    "CONGESTED": 297,
+    "SLOW": 98,
+    "SMOOTH": 60
+  },
+  "raw_objects": [],
+  "bronze_objects": [],
+  "snapshot_output": "data/reference/seoul_traffic_latest.parquet",
+  "snapshot_sha256": "abf3ce20891b6b810ca6abf3372d6c588c30add908b62dfb2ce7d906ece40930",
+  "snapshot_bytes": 52365,
+  "duration_seconds": 0.61,
+  "live_api": true
+}

@@ -7,6 +7,8 @@ with ranked as (
 
 select
     segment_id,
+    area_code,
+    area_name,
     observed_at,
     source_system,
     speed_kph,

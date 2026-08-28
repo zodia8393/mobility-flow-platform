@@ -10,8 +10,8 @@ Terraform baseline은 다음 resource를 만듭니다.
 - least-privilege S3/CloudWatch pipeline task role
 - CloudWatch log group, dashboard, freshness·DQ alarms, optional SNS email
 
-RDS, MSK, always-on ECS service는 default로 만들지 않습니다. Portfolio verification에 불필요한
-상시 비용을 피하면서 실제 S3 integration과 operations telemetry를 검증하기 위한 범위입니다.
+RDS, MSK, always-on ECS service는 default로 만들지 않습니다. 개발·검증 단계의 상시 비용을
+피하면서 실제 S3 integration과 operations telemetry를 확인하기 위한 범위입니다.
 
 ## Preflight
 
@@ -48,7 +48,7 @@ Airflow·Kafka·Spark는 local container에서 실행하되 bronze/silver object
 3. CloudWatch custom metric과 alarm state
 4. 동일 run의 Airflow log, DB row count, evidence JSON
 
-Account ID, access key, secret, internal endpoint는 screenshot과 portfolio artifact에서 제거합니다.
+Account ID, access key, secret, internal endpoint는 screenshot과 공유 artifact에서 제거합니다.
 
 ## Cost and teardown
 

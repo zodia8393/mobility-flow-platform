@@ -7,7 +7,7 @@ import httpx
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Export reproducible portfolio evidence")
+    parser = argparse.ArgumentParser(description="Export the latest operational run manifest")
     parser.add_argument("--base-url", default="http://api:8000")
     parser.add_argument("--output", default="-")
     return parser.parse_args()
@@ -19,14 +19,8 @@ def main() -> None:
         payload = {
             "generated_at": datetime.now(UTC).isoformat(),
             "project": "MobilityFlow DataOps",
-            "data_scope": "privacy-safe synthetic TMAP/TCS/VDS/GPS traffic observations",
-            "claims_policy": (
-                "Current-run metrics and separately labeled historical portfolio baselines "
-                "are never merged."
-            ),
-            "portfolio_baseline": client.get("/api/portfolio-baseline")
-            .raise_for_status()
-            .json(),
+            "data_scope": "Seoul public real-time citydata road traffic observations",
+            "source": client.get("/api/source").raise_for_status().json(),
             "overview": client.get("/api/overview").raise_for_status().json(),
             "services": client.get("/api/services").raise_for_status().json(),
             "delivery": client.get("/api/delivery/latest").raise_for_status().json(),

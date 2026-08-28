@@ -1,4 +1,4 @@
-name: end-to-end-demo
+name: Seoul live end-to-end
 
 on:
   workflow_dispatch:
@@ -7,19 +7,23 @@ permissions:
   contents: read
 
 jobs:
-  demo:
+  live-pipeline:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      SEOUL_OPEN_DATA_API_KEY: ${{ secrets.SEOUL_OPEN_DATA_API_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - uses: astral-sh/setup-uv@v6
-      - run: cp .env.example .env
-      - run: EVENT_COUNT=3000 make demo
+      - name: Verify live API credential
+        run: test -n "$SEOUL_OPEN_DATA_API_KEY"
+      - name: Run official API to publishing gate
+        run: make live
       - uses: actions/upload-artifact@v4
         with:
-          name: mobility-flow-run-evidence
-          path: docs/evidence/generated/run_evidence.json
+          name: mobility-flow-live-run-evidence
+          path: docs/evidence/generated/live_run.json
           if-no-files-found: error

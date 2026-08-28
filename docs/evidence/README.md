@@ -1,42 +1,34 @@
-# Evidence Guide
+# Runtime Evidence
 
-## Verified local run — 2026-08-28 KST
+## 실제 공개 원천
 
-운영 demo 수치는 Docker local environment, Spark `local[2]`, privacy-safe synthetic traffic
-observation을 사용한 실제 실행 결과입니다. 기존 포트폴리오 실무 기준선과 합산하지 않으며 Cloud
-또는 distributed-cluster benchmark로 해석하지 않습니다.
+- 제공기관: 서울특별시·서울 열린데이터광장
+- 데이터셋: 서울시 실시간 도시데이터·도로소통
+- 수집 방식: API key를 환경변수로 주입한 live request
+- 원천 보존: 도로소통 response gzip JSON + payload SHA-256
+- 변환 결과: `data/reference/seoul_traffic_latest.parquet`
+- Manifest: `data/reference/source_manifest.json`
 
-| Verification | Result |
-|---|---:|
-| File preflight | 8 input / 8 accepted / 0 rejected |
-| File → Bronze → Spark → dbt delivery | `READY`, 4/4 gates PASS, 3 SHA-256 artifacts |
-| Stream E2E input after schema quarantine | 984 rows |
-| Spark deduplication | 42 duplicates removed |
-| Accepted warehouse rows in the stream run | 942 rows |
-| Late events (>15 min) | 43 rows |
-| Spark transform duration | 3.867 sec |
-| dbt data tests | 27/27 PASS |
-| dbt source freshness | PASS |
-| Failure drill buffered events | 1,200 messages |
-| Failure drill recovery | 17 sec |
-| Failure drill DLQ | 56 invalid events |
-| Immediate replay | `NO_DATA` (idempotent) |
+Reference Snapshot은 광화문·덕수궁, 강남 MICE 관광특구, 여의도 3개 지역의 실제 도로 링크
+455개를 포함하며 455개 모두 contract 검증을 통과했습니다. API에 없는 기준속도와 교통량은
+생성하지 않고 `NULL`로 보존합니다.
 
-Machine-readable samples:
+## End-to-end 확인 항목
 
-- [example_run_summary.json](example_run_summary.json)
-- [example_file_ingest.json](example_file_ingest.json)
-- [example_failure_drill.json](example_failure_drill.json)
+1. Airflow의 `sync_seoul_live_traffic` task가 공식 API를 호출합니다.
+2. landing JSON과 canonical Bronze Parquet의 object key가 run에 남습니다.
+3. Spark input·accepted·duplicate 수가 reconciliation을 만족합니다.
+4. 서울 원천 전용 freshness를 포함한 dbt data test 28개와 source freshness가 통과합니다.
+5. Silver artifact별 row count, byte size, SHA-256가 manifest에 남습니다.
+6. Control Room의 source 기준시각·지역·도로 링크와 warehouse 값이 일치합니다.
+7. source object, reconciliation, dbt, artifact hash가 모두 PASS일 때만 `READY`입니다.
 
-`make demo`와 `make failure-drill`을 실행하면 current evidence가 `generated/` 아래에 새로 생성됩니다.
-Generated result는 환경마다 달라지므로 Git에서 제외합니다.
+`make live` 실행 결과는 `docs/evidence/generated/live_run.json`에 생성되며 환경·시각에 따라
+달라지므로 Git에서 제외합니다. 공개 저장소의 GIF/MP4는 같은 live run의 Control Room을 녹화한
+것이며 정적 mockup이 아닙니다.
 
-## Screenshot checklist
+## 별도 장애복구 검증
 
-- Control Room 상단의 `SYNTHETIC DATA` 범위 표시
-- Kafka, object store, PostgreSQL service health
-- freshness, row count, DQ/dbt status
-- road-segment congestion map and source/action queue
-- delivery `READY/BLOCKED`, row reconciliation, dbt, SHA-256 artifact gates
-- run-level input/accepted/dedup/late/duration
-- `SUCCESS`, `TRANSFORMED`, `NO_DATA`, `FAILED` state evidence
+`failure_drill_20260828.json`은 live source 값이 아니라 pipeline transport의 장애복구 시험 결과입니다.
+Bronze writer 중단 중 Kafka backlog 보존, invalid DLQ 격리, immediate replay `NO_DATA`를 검증합니다.
+이 결과를 서울시 live traffic 수치와 합산하지 않습니다.

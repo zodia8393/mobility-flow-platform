@@ -1,122 +1,118 @@
-# MobilityFlow DataOps
+# MobilityFlow
 
-> **TMAP·TCS·VDS·GPS 원천을 실제로 검수·적재하고, 산출물의 납품 가능 여부를 한 화면에서 판단하는 교통 데이터 운영 플랫폼**
+서울특별시의 실시간 도로소통 데이터를 주기적으로 수집하고, 원본 보존부터 품질검증과 게시 가능
+판정까지 수행하는 운영형 데이터 파이프라인입니다.
 
-기존 포트폴리오의 `93,432,415행 TMAP audit`, `row·sum·hash gate`, `197 artifact/run` 경험을
-Cloud·Airflow·Spark·dbt 운영 구조로 확장했습니다. 연구용 모델이 아니라 현업에서 반복되는
-**파일 사전검수 → 격리 → 적재 → 품질차단 → 납품 manifest**를 줄이는 도구입니다.
+![MobilityFlow live operation](docs/mobilityflow-live.gif)
 
-CSV·CSV.GZ·Parquet file은 column mapping을 적용해 바로 검수할 수 있고, 15분 feed는
-Kafka-compatible stream으로 받을 수 있습니다. 공개 저장소에서는 고객 원천 대신 같은 contract의
-privacy-safe synthetic fixture를 사용합니다.
+> 실제 실행 전체 영상: [MP4 보기](docs/mobilityflow-live.mp4)
+
+## 실제로 하는 일
+
+- 서울 열린데이터광장 API에서 `광화문·덕수궁`, `강남 MICE 관광특구`, `여의도`의 도로 링크를
+  15분마다 수집합니다.
+- 수신한 원문을 gzip JSON으로 먼저 보존하고 SHA-256을 남깁니다.
+- API의 `LINK_ID`, 속도, 도로명, 거리, 좌표열, 공식 정체 단계를 canonical Parquet로 변환합니다.
+- Spark가 새 Bronze object만 읽어 `event_id` 중복을 제거하고 PostgreSQL에 멱등 적재합니다.
+- dbt가 서울 원천 전용 freshness를 포함한 28개 data test와 source freshness를 통과한 경우에만 최신 mart를 공개합니다.
+- row reconciliation과 Silver artifact hash까지 모두 통과해야 Control Room이 `READY`를 표시합니다.
+
+API에 존재하지 않는 교통량이나 기준속도는 임의로 채우지 않습니다. 해당 필드는 `NULL`로 보존하고
+정체 상태는 서울시가 제공한 `원활·서행·정체` 값을 그대로 표준화합니다.
+
+## 현재 저장된 실제 데이터
+
+`data/reference/seoul_traffic_latest.parquet`는 서울시 API에서 직접 수집한 공개 데이터 Snapshot입니다.
+
+| 항목 | 값 |
+|---|---:|
+| 수집 시각 | 2026-08-28 18:22 KST |
+| 지역 | 3개 |
+| 도로 링크 | 455개 |
+| 검증 통과 | 455개 |
+| 격리 | 0개 |
+
+원천별 payload hash와 수집 조건은
+[`data/reference/source_manifest.json`](data/reference/source_manifest.json)에 기록되어 있습니다.
+
+데이터 제공처는 [서울시 실시간 도시데이터](https://data.seoul.go.kr/SeoulRtd/)이며,
+[서울 열린데이터광장 데이터셋](https://data.seoul.go.kr/dataList/OA-21285/A/1/datasetView.do)의
+이용정책과 출처표시 조건을 따릅니다. 서울시는 도로소통 데이터의 갱신주기를 5분으로 안내합니다.
+
+## 처리 흐름
 
 ![MobilityFlow architecture](docs/architecture.svg)
 
-![MobilityFlow Control Room](docs/control-room.png)
-
-## 30초 요약
-
-| 질문 | 구현 증거 |
-|---|---|
-| 실제 업무 파일을 받을 수 있는가? | CSV·CSV.GZ·Parquet + source별 column mapping + `--dry-run` 사전검수 |
-| 15분 feed는 어떻게 받는가? | idempotent producer/connector → Redpanda(Kafka API) 3 partitions |
-| 잘못된 데이터는 어떻게 다루는가? | 오류 사유별 quarantine/DLQ 격리, source hash·offset 보존 |
-| 장애 후 유실되지 않는가? | Parquet upload 후 offset commit, stable consumer group, `event_id` dedup |
-| 재실행해도 안전한가? | bronze object manifest + PostgreSQL upsert + dbt incremental unique key |
-| 누가 언제 실패를 아는가? | Airflow retry/timeout, Prometheus metrics, Grafana, freshness/DQ status |
-| Cloud로 옮길 수 있는가? | S3-compatible adapter와 Terraform 기반 AWS S3/ECR/ECS/CloudWatch baseline |
-| 산출물을 바로 써도 되는가? | row reconciliation + dbt gate + SHA-256 artifact manifest가 모두 PASS일 때만 `READY` |
-
-## End-to-end data flow
-
 ```text
-Daily files: CSV / CSV.GZ / Parquet → mapping + dry-run + quarantine ─┐
-15m feeds: TMAP / TCS / VDS / GPS → Redpanda + DLQ ────────────────┤
-                                                                    ▼
-MinIO locally / AWS S3 in cloud (partitioned Bronze Parquet)
-  → Airflow every 15 min (retry, timeout, no overlapping run)
-  → Spark (dedup, late-event flag, congestion classification)
-  → PostgreSQL + dbt (staging, incremental fact, marts, tests, freshness)
-  → Delivery READY/BLOCKED manifest + FastAPI Control Room + Prometheus/Grafana
+Seoul Real-Time City Data API
+  → Raw Landing JSON.gz + SHA-256
+  → Canonical Bronze Parquet
+  → Airflow 15-minute schedule
+  → Spark dedup / late-event handling
+  → PostgreSQL + dbt marts / 28 tests / source freshness
+  → READY or BLOCKED manifest
+  → Control Room + Prometheus + Grafana
 ```
 
-### Data contract
+각 source response와 Bronze/Silver artifact는 run 단위로 추적할 수 있습니다. 같은 5분 Snapshot을
+다시 받아도 `area_code + LINK_ID + snapshot_at` 기반 `event_id`가 같아 중복 적재되지 않습니다.
 
-Event grain은 `segment_id × observed_at`이며 transport-level idempotency key는 `event_id`입니다.
-속도·기준속도·교통량·통행시간·좌표·timezone을 ingestion boundary에서 검증합니다. Kafka의
-at-least-once 특성상 발생 가능한 중복은 Spark와 warehouse 두 계층에서 제거합니다.
+## 실행
 
-## Quick start
-
-Requirements: Docker 24+, Docker Compose v2+, 약 8 GB memory.
+Requirements: Docker 24+, Docker Compose v2+, 약 8 GB memory, 서울 열린데이터광장 인증키.
 
 ```bash
 cp .env.example .env
-make demo
+# .env의 SEOUL_OPEN_DATA_API_KEY에 무료 발급 키 입력
+make live
 ```
 
-### 실제 파일 사전검수·적재
+`make live`는 전체 서비스를 기동하고 실제 API 수집 → Spark → dbt → 게시 Gate까지 Airflow DAG로
+실행합니다.
 
-먼저 sample을 object store에 올리지 않고 검사합니다.
-
-```bash
-uv run mobility-ingest-file examples/tcs_15min_sample.csv \
-  --source-system TCS \
-  --column-map @examples/tcs_column_map.json \
-  --dry-run
-```
-
-`input_rows = accepted_rows + rejected_rows`를 확인한 뒤 `--dry-run`을 제거하면 valid row는
-Bronze Parquet, invalid row는 오류 사유가 포함된 quarantine Parquet로 분리됩니다. 동일 파일과
-mapping은 SHA-256 fingerprint가 같아 재업로드·재실행을 추적할 수 있습니다.
-
-```bash
-uv run mobility-ingest-file /path/to/tmap_daily.csv.gz \
-  --source-system TMAP \
-  --vehicle-type PASSENGER \
-  --column-map @/path/to/tmap_column_map.json \
-  --output ingest_report.json
-```
-
-`make demo`는 다음을 한 번에 실행합니다.
-
-1. PostgreSQL, Redpanda, MinIO, Spark runner, API, Prometheus, Grafana 기동
-2. fault가 포함된 synthetic event 생성
-3. Kafka → Bronze Parquet 적재 확인
-4. Airflow DAG로 Spark transform → dbt build/test/freshness 실행
-5. 측정된 run evidence를 `docs/evidence/generated/run_evidence.json`에 저장
-
-| UI | URL | 확인할 내용 |
+| 화면 | URL | 용도 |
 |---|---|---|
-| Control Room | http://localhost:18000 | freshness, 정체 구간, 품질 gate, 납품 READY/BLOCKED |
-| Airflow | http://localhost:18080 | DAG retry, log, task dependency |
-| Grafana | http://localhost:13000 | throughput, DLQ, duration, SLO |
-| MinIO | http://localhost:19001 | bronze/silver partition과 Parquet object |
-| Spark UI | http://localhost:14040 | 실행 중 stage와 shuffle |
+| Control Room | http://localhost:18000 | 실제 도로 링크, 정체, freshness, 게시 Gate |
+| Airflow | http://localhost:18080 | 수집·변환·품질검증 task와 retry 이력 |
+| Grafana | http://localhost:13000 | 처리량, 실패, 실행시간, freshness |
+| MinIO | http://localhost:19001 | Raw/Bronze/Silver object와 partition |
+| Spark UI | http://localhost:14040 | 실행 중 stage와 task |
 
-Local UI credential은 `.env.example`의 demo-only 값입니다. 공유 또는 Cloud 환경에서는 반드시
-교체해야 합니다.
+현재 설정으로 한 번만 다시 수집하려면 다음을 실행합니다.
 
-## Operations built into the project
+```bash
+make sync
+```
 
-- **Retry / replay:** Airflow task retry 2회, object manifest에 없는 batch만 처리
-- **DLQ:** schema/JSON 위반 event를 source topic/partition/offset과 함께 격리
-- **Batch preflight:** source column mapping, timezone·범위 검증, dry-run, 오류 사유별 quarantine
-- **Late data:** event time과 ingestion time 차이가 15분을 넘으면 `is_late=true`
-- **Idempotency:** upload 완료 전 Kafka offset을 commit하지 않고 `event_id`로 재처리 안전성 확보
-- **Quality gate:** dbt `unique`, `not_null`, `relationships`, `accepted_values`, custom SQL tests
-- **Freshness SLO:** warning 15분, failure 30분
-- **Delivery gate:** input/accepted/dedup reconciliation, dbt PASS, Silver SHA-256 manifest가 모두
-  통과해야 `READY`
-- **Observability:** Prometheus metrics, provisioned Grafana dashboard, run-level evidence JSON
-- **Backfill:** 동일 DAG를 기간 지정 실행하며 이미 처리된 object는 manifest로 skip 가능
+실제 Control Room을 같은 방식으로 다시 녹화하려면 서비스 실행 후 `make capture`를 실행합니다.
 
-Failure drill과 backfill 절차는 [운영 Runbook](docs/runbook.md)에 있습니다.
+Object store에 적재하지 않고 공식 API 응답만 검증·보관할 수도 있습니다.
 
-## AWS mode
+```bash
+uv run mobility-seoul-sync \
+  --no-upload \
+  --snapshot-output data/reference/seoul_traffic_latest.parquet \
+  --report data/reference/source_manifest.json
+```
 
-Local MinIO와 AWS S3는 같은 adapter를 사용합니다. `S3_ENDPOINT_URL`을 비우고 Terraform output의
-bucket을 설정하면 application code 변경 없이 AWS credential chain을 사용합니다.
+## 운영 안전장치
+
+- **Source preservation:** 필요한 도로소통 응답을 변환 전에 gzip JSON으로 보존
+- **Idempotency:** 5분 Snapshot 단위 deterministic `event_id`, object manifest, PostgreSQL upsert
+- **Quarantine:** 좌표·속도·거리·schema 오류를 원천 링크와 사유가 포함된 object로 격리
+- **Quality gate:** `unique`, `not_null`, `relationships`, `accepted_values`, reconciliation SQL
+- **Freshness:** warning 15분, failure 30분
+- **Publishing gate:** source object, row reconciliation, dbt PASS, artifact SHA-256가 모두 필요
+- **Recovery:** Airflow retry/timeout, 새 object만 처리, 동일 run replay 안전성
+- **Observability:** Prometheus target과 provisioned Grafana dashboard
+
+운영 대응과 replay 절차는 [Operations runbook](docs/runbook.md), field 정의와 원천 매핑은
+[Data contract](docs/data-contract.md)에 있습니다.
+
+## Cloud 배포 경계
+
+Local MinIO와 AWS S3는 같은 storage adapter를 사용합니다. Terraform은 versioning/encryption이
+적용된 S3, ECR, ECS, CloudWatch dashboard·alarm, SNS와 least-privilege IAM을 선언합니다.
 
 ```bash
 cd infra/terraform
@@ -124,45 +120,40 @@ terraform init
 terraform plan -var='alert_email=you@example.com'
 ```
 
-Terraform은 encrypted/versioned S3 data lake, immutable ECR repositories, ECS cluster,
-CloudWatch dashboard·alarm, least-privilege task role을 선언합니다. 실제 `terraform apply`는 비용과
-external state를 만들기 때문에 명시적으로 실행하지 않습니다. 상세 내용은
-[AWS deployment guide](docs/aws-deployment.md)를 참고하세요.
+실제 AWS `apply`는 비용과 외부 상태를 만들기 때문에 자동 실행하지 않습니다. 자세한 내용은
+[AWS deployment guide](docs/aws-deployment.md)에 있습니다.
 
-## Verification
+## 검증
 
 ```bash
-make check          # ruff + pytest + terraform validate + compose config
-make failure-drill  # buffered outage, DLQ, idempotent no-op replay evidence
+make check
+make failure-drill
 ```
 
-실무 기준선(93,432,415행·15.399GiB·197 artifact/run)은 기존 portfolio evidence ledger와 연결하고,
-공개 운영 demo의 처리량·시간·중복 제거 건수는 각 실행의 evidence JSON으로 분리합니다.
-
-검증된 example result와 이력서용 표현은 [Evidence guide](docs/evidence/README.md)와
-[Portfolio entry](docs/portfolio-entry.md)에 분리해 두었습니다.
+- Unit/contract test 27건
+- dbt data test 28건(서울 원천 전용 freshness 포함) + source freshness
+- Terraform fmt/init/validate
+- Docker Compose validation
+- GitHub Actions quality gate
 
 ## Repository map
 
 ```text
-airflow/dags/             orchestration, retry, quality gate
-dbt/                      staging/fact/marts/tests/exposure
-infra/terraform/          AWS S3/ECR/ECS/CloudWatch baseline
-monitoring/               Prometheus and provisioned Grafana dashboard
-src/mobility_flow/        file ingestion, stream writer, Spark runner, Control API
-examples/                 실제 file mapping 사용 예시
-tests/                     contracts and deterministic failure fixtures
-docs/evidence/generated/  run-scoped metrics and screenshots (generated)
+airflow/dags/              official API sync → Spark → dbt orchestration
+data/reference/            attributed real public-data Snapshot and manifest
+dbt/                       staging, incremental fact, marts and tests
+infra/terraform/           AWS deployment baseline
+monitoring/                Prometheus and Grafana provisioning
+src/mobility_flow/         live connector, ingestion, Spark runner and API
+docs/                      contracts, runbook, architecture and execution video
+tests/                     deterministic contract and failure tests
 ```
 
-## Scope and honesty
+## 데이터 사용 범위
 
-- 공개 demo의 교통 관측값과 도로 구간은 **synthetic data**이며 실시간 서울시 API 결과가 아닙니다.
-- 실제 업무 파일은 `mobility-ingest-file`로 사용할 수 있지만 source별 의미·집계 단위는 mapping 전에
-  담당자가 확인해야 합니다.
-- Local stack은 managed Cloud service 운영 경력을 대신하지 않습니다. 대신 동일 artifact가 AWS S3로
-  이동하고 CloudWatch에 지표를 발행할 수 있는 boundary와 IaC를 제공합니다.
-- Spark 기본 mode는 laptop에서 재현 가능한 `local[2]`입니다. `SPARK_MASTER`로 standalone cluster를
-  연결할 수 있지만, 분산 cluster benchmark를 주장하지 않습니다.
+- 저장된 도로 데이터는 서울특별시가 공개한 집계형 도로소통 정보이며 회사 내부 원천을 포함하지 않습니다.
+- `observed_at`은 API에 별도 측정시각이 없어 수집시각을 5분 단위로 내린 Snapshot 기준시각입니다.
+- Terraform은 S3·ECR·ECS·CloudWatch·IAM resource를 선언하지만 기본 설정에서는 AWS resource를
+  자동 생성하지 않습니다.
 
-License: MIT
+License: MIT. 외부 데이터에는 원 제공기관의 이용조건이 우선 적용됩니다.

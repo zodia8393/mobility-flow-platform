@@ -8,5 +8,5 @@ models:
         tests: [not_null, unique]
       - name: segment_id
         tests: [not_null]
-      - name: speed_index
+      - name: speed_kph
         tests: [not_null]

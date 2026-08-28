@@ -6,7 +6,7 @@ sources:
     schema: raw
     tables:
       - name: traffic_observation
-        description: "공개 synthetic schema contract와 검증을 통과한 도로 구간 관측 이벤트"
+        description: "공식 공개 원천과 schema contract 검증을 통과한 도로 구간 관측 이벤트"
         loaded_at_field: loaded_at
         freshness:
           warn_after: {count: 15, period: minute}
@@ -22,9 +22,9 @@ sources:
             tests:
               - accepted_values:
                   arguments:
-                    values: ["TMAP", "TCS", "VDS", "GPS"]
+                    values: ["TMAP", "TCS", "VDS", "GPS", "SEOUL_TOPIS"]
           - name: congestion_level
             tests:
               - accepted_values:
                   arguments:
-                    values: ["SEVERE", "CONGESTED", "SLOW", "SMOOTH"]
+                    values: ["SEVERE", "CONGESTED", "SLOW", "SMOOTH", "UNKNOWN"]

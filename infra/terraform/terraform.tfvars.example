@@ -1,4 +1,4 @@
 aws_region   = "ap-northeast-2"
-environment  = "portfolio"
+environment  = "dev"
 alert_email  = ""
 # bucket_name = "globally-unique-name-if-you-do-not-want-the-generated-default"

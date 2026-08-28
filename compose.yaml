@@ -139,8 +139,6 @@ services:
     image: mobility-flow-app:local
     profiles: ["tools"]
     environment: *app-environment
-    volumes:
-      - ./examples:/app/examples:ro
     command: ["mobility-producer", "--count", "1000"]
     depends_on: *app-dependencies
 
@@ -189,6 +187,8 @@ services:
     environment:
       <<: *app-environment
       APP_ENV: local
+      SEOUL_OPEN_DATA_API_KEY: ${SEOUL_OPEN_DATA_API_KEY:-}
+      SEOUL_CITYDATA_AREAS: ${SEOUL_CITYDATA_AREAS:-광화문·덕수궁,강남 MICE 관광특구,여의도}
     command: ["uvicorn", "mobility_flow.api:app", "--host", "0.0.0.0", "--port", "8000"]
     ports:
       - "18000:8000"

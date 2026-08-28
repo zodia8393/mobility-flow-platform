@@ -12,8 +12,8 @@ class RoadSegment:
     source_system: str
 
 
-# Privacy-safe synthetic segments near familiar Seoul corridors. They are not copied from a
-# client source and do not represent a live traffic feed.
+# Deterministic transport-test segments used only by the failure generator. Default operation
+# uses the Seoul Open Data connector instead.
 ROAD_SEGMENTS: tuple[RoadSegment, ...] = (
     RoadSegment("SEG-001", "강변북로·마포", 37.5498, 126.9368, 4.8, 80, "TMAP"),
     RoadSegment("SEG-002", "강변북로·용산", 37.5298, 126.9648, 5.1, 80, "TMAP"),

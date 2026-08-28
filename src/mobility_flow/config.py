@@ -27,9 +27,17 @@ class Settings(BaseSettings):
     spark_master: str = "local[2]"
     spark_driver_memory: str = "1g"
 
+    seoul_open_data_api_key: str | None = None
+    seoul_citydata_areas: str = "광화문·덕수궁,강남 MICE 관광특구,여의도"
+    seoul_citydata_timeout_seconds: float = 20.0
+
     @property
     def is_aws_object_store(self) -> bool:
         return not self.s3_endpoint_url
+
+    @property
+    def seoul_areas(self) -> tuple[str, ...]:
+        return tuple(area.strip() for area in self.seoul_citydata_areas.split(",") if area.strip())
 
 
 @lru_cache

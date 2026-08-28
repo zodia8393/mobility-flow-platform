@@ -12,7 +12,7 @@ variable "project_name" {
 variable "environment" {
   description = "Deployment environment label."
   type        = string
-  default     = "portfolio"
+  default     = "dev"
 }
 
 variable "aws_region" {

@@ -59,7 +59,7 @@ def health() -> dict[str, str]:
 
 
 @app.get("/bronze/stats")
-def bronze_stats(prefix: str = "bronze/traffic_observations/") -> dict[str, int | str]:
+def bronze_stats(prefix: str = "bronze/seoul_citydata/") -> dict[str, int | str]:
     objects = list(STORE.list_objects(prefix))
     return {
         "prefix": prefix,
@@ -142,7 +142,22 @@ def _run_transform(request: TransformRequest) -> TransformResult:
             }
 
             spark = _spark_session(run_id)
-            frame = spark.read.parquet(*[str(path) for path in local_files])
+            frame = spark.read.option("mergeSchema", "true").parquet(
+                *[str(path) for path in local_files]
+            )
+            optional_columns = {
+                "area_code": "string",
+                "area_name": "string",
+                "start_latitude": "double",
+                "start_longitude": "double",
+                "end_latitude": "double",
+                "end_longitude": "double",
+                "source_congestion_level": "string",
+                "source_payload_sha256": "string",
+            }
+            for column, data_type in optional_columns.items():
+                if column not in frame.columns:
+                    frame = frame.withColumn(column, F.lit(None).cast(data_type))
             frame = (
                 frame.withColumn("observed_at", F.to_timestamp("observed_at"))
                 .withColumn("ingested_at", F.to_timestamp("ingested_at"))
@@ -163,7 +178,17 @@ def _run_transform(request: TransformRequest) -> TransformResult:
             accepted_rows = deduplicated.count()
             duplicates_removed = input_rows - accepted_rows
 
-            speed_index = F.col("speed_kph") / F.col("reference_speed_kph")
+            speed_index = F.when(
+                F.col("reference_speed_kph").isNotNull(),
+                F.col("speed_kph") / F.col("reference_speed_kph"),
+            )
+            derived_congestion = (
+                F.when(speed_index.isNull(), F.lit("UNKNOWN"))
+                .when(speed_index <= 0.30, F.lit("SEVERE"))
+                .when(speed_index <= 0.50, F.lit("CONGESTED"))
+                .when(speed_index <= 0.70, F.lit("SLOW"))
+                .otherwise(F.lit("SMOOTH"))
+            )
             transformed = (
                 deduplicated.withColumn(
                     "is_late",
@@ -172,10 +197,7 @@ def _run_transform(request: TransformRequest) -> TransformResult:
                 .withColumn("speed_index", F.round(speed_index, 6))
                 .withColumn(
                     "congestion_level",
-                    F.when(speed_index <= 0.30, F.lit("SEVERE"))
-                    .when(speed_index <= 0.50, F.lit("CONGESTED"))
-                    .when(speed_index <= 0.70, F.lit("SLOW"))
-                    .otherwise(F.lit("SMOOTH")),
+                    F.coalesce(F.col("source_congestion_level"), derived_congestion),
                 )
                 .cache()
             )

@@ -36,7 +36,7 @@ def test_event_contract_accepts_valid_traffic_observation() -> None:
 
 @pytest.mark.parametrize(
     ("field", "value"),
-    [("speed_kph", -1), ("segment_id", "bad-id"), ("schema_version", "2.0")],
+    [("speed_kph", -1), ("segment_id", "bad id"), ("schema_version", "2.0")],
 )
 def test_event_contract_rejects_invalid_values(field: str, value: object) -> None:
     payload = valid_event()
@@ -50,3 +50,24 @@ def test_event_contract_rejects_naive_timestamp() -> None:
     payload["observed_at"] = "2026-08-28T09:00:00"
     with pytest.raises(ValidationError, match="timezone"):
         TrafficObservationEvent.model_validate(payload)
+
+
+def test_event_contract_accepts_official_source_without_invented_volume_or_reference() -> None:
+    payload = valid_event()
+    payload.update(
+        {
+            "schema_version": "1.1",
+            "segment_id": "1000000301",
+            "source_system": "SEOUL_TOPIS",
+            "reference_speed_kph": None,
+            "traffic_volume": None,
+            "source_congestion_level": "SLOW",
+            "source_payload_sha256": "a" * 64,
+        }
+    )
+
+    event = TrafficObservationEvent.model_validate(payload)
+
+    assert event.reference_speed_kph is None
+    assert event.traffic_volume is None
+    assert event.source_congestion_level == "SLOW"
