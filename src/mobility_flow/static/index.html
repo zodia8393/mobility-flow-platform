@@ -66,7 +66,7 @@
         <div class="pipeline-node" data-service="seoul_open_data"><i>01</i><b>Seoul API</b><span>3개 지역 · 5분 원천</span></div><em>→</em>
         <div class="pipeline-node"><i>02</i><b>Raw Landing</b><span>gzip JSON · SHA-256</span></div><em>→</em>
         <div class="pipeline-node" data-service="object_store"><i>03</i><b>Bronze</b><span>canonical Parquet</span></div><em>→</em>
-        <div class="pipeline-node"><i>04</i><b>Spark</b><span>dedup · late event</span></div><em>→</em>
+        <div class="pipeline-node"><i>04</i><b>PySpark local</b><span>dedup · late event</span></div><em>→</em>
         <div class="pipeline-node" data-service="postgres"><i>05</i><b>dbt Mart</b><span>tests · freshness</span></div><em>→</em>
         <div class="pipeline-node accent"><i>06</i><b>Operations</b><span>READY / BLOCKED</span></div>
       </div>

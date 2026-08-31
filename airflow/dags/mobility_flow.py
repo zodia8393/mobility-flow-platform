@@ -32,7 +32,7 @@ def _update_run(run_id: str, payload: dict[str, object]) -> None:
 
 @dag(
     dag_id="mobility_flow_15m",
-    description="Seoul live traffic → Spark silver → dbt marts with quality gates",
+    description="Seoul live traffic → PySpark local silver → dbt marts with quality gates",
     schedule="*/15 * * * *",
     start_date=datetime(2026, 1, 1),
     catchup=False,
@@ -48,10 +48,10 @@ def _update_run(run_id: str, payload: dict[str, object]) -> None:
     ### MobilityFlow — Seoul road traffic pipeline
     1. Fetch current road traffic for configured Seoul citydata areas.
     2. Preserve the source response and write canonical Bronze Parquet.
-    3. Trigger idempotent Spark deduplication and official congestion mapping.
+    3. Trigger idempotent PySpark local deduplication and official congestion mapping.
     4. Build and test dbt marts, then publish a run manifest to the Control Room.
 
-    The API response is preserved before canonical Bronze creation. Spark uses an object
+    The API response is preserved before canonical Bronze creation. PySpark uses an object
     manifest and `event_id` upsert, so a retry can safely replay an interrupted batch.
     """,
 )

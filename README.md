@@ -1,7 +1,8 @@
 # MobilityFlow
 
 서울특별시의 실시간 도로소통 데이터를 주기적으로 수집하고, 원본 보존부터 품질검증과 게시 가능
-판정까지 수행하는 운영형 데이터 파이프라인입니다.
+판정까지 수행하는 데이터 파이프라인입니다. Airflow가 수집·재실행을 조정하고 PostgreSQL/dbt가
+모델과 품질 기준을 관리합니다.
 
 ![MobilityFlow live operation](docs/mobilityflow-live.gif)
 
@@ -13,7 +14,8 @@
   15분마다 수집합니다.
 - 수신한 원문을 gzip JSON으로 먼저 보존하고 SHA-256을 남깁니다.
 - API의 `LINK_ID`, 속도, 도로명, 거리, 좌표열, 공식 정체 단계를 canonical Parquet로 변환합니다.
-- Spark가 새 Bronze object만 읽어 `event_id` 중복을 제거하고 PostgreSQL에 멱등 적재합니다.
+- PySpark `local[2]` 변환 단계가 새 Bronze object만 읽어 `event_id` 중복을 제거하고 PostgreSQL에
+  멱등 적재합니다. 이 단계는 분산 성능 주장이 아니라 변환·재실행 계약을 검증하는 범위입니다.
 - dbt가 서울 원천 전용 freshness를 포함한 28개 data test와 source freshness를 통과한 경우에만 최신 mart를 공개합니다.
 - row reconciliation과 Silver artifact hash까지 모두 통과해야 Control Room이 `READY`를 표시합니다.
 
@@ -34,6 +36,21 @@ API에 존재하지 않는 교통량이나 기준속도는 임의로 채우지 �
 
 원천별 payload hash와 수집 조건은 [수집 Manifest](data/reference/source_manifest.json)에서 확인할 수 있습니다.
 
+### Scheduled operation snapshot · 2026-08-31
+
+local Docker Compose에서 Airflow 15분 schedule을 유지한 시점의 운영 Snapshot입니다.
+
+| 항목 | 확인값 |
+|---|---:|
+| Warehouse 누적 관측 | 115,570행 |
+| 최신 run | 455 input = 455 accepted + 0 duplicate |
+| 최근 실행 | 10/10 SUCCESS, dbt PASS 10/10 |
+| 게시 판정 | READY, gate 4/4 PASS |
+
+계측 근거는 [scheduled operation evidence](docs/evidence/scheduled_operation_20260831.json)와
+[Control Room](docs/control-room.png)에 남겼습니다. 이 수치는 local scheduled operation이며 managed
+Airflow나 분산 Spark 운영 성과로 확대하지 않습니다.
+
 데이터 제공처는 [서울시 실시간 도시데이터](https://data.seoul.go.kr/SeoulRtd/)이며,
 [서울 열린데이터광장 데이터셋](https://data.seoul.go.kr/dataList/OA-21285/A/1/datasetView.do)의
 이용정책과 출처표시 조건을 따릅니다. 서울시는 도로소통 데이터의 갱신주기를 5분으로 안내합니다.
@@ -47,7 +64,7 @@ Seoul Real-Time City Data API
   → Raw Landing JSON.gz + SHA-256
   → Canonical Bronze Parquet
   → Airflow 15-minute schedule
-  → Spark dedup / late-event handling
+  → PySpark local[2] dedup / late-event handling
   → PostgreSQL + dbt marts / 28 tests / source freshness
   → READY or BLOCKED manifest
   → Control Room + Prometheus + Grafana
@@ -55,6 +72,18 @@ Seoul Real-Time City Data API
 
 각 source response와 Bronze/Silver artifact는 run 단위로 추적할 수 있습니다. 같은 5분 Snapshot을
 다시 받아도 `area_code + LINK_ID + snapshot_at` 기반 `event_id`가 같아 중복 적재되지 않습니다.
+
+## 기술 선택과 실행 범위
+
+| 구성 | 이 프로젝트에서 맡는 역할 | 검증 범위 |
+|---|---|---|
+| Airflow | 15분 schedule, retry, manual run, backfill | local Docker와 GitHub Actions |
+| PySpark `local[2]` | Bronze 변환, dedup, late-event 분리 | 변환 정확성과 idempotent replay |
+| PostgreSQL + dbt | Silver mart, relationship·freshness test | 실제 서울 API Snapshot과 CI |
+| Prometheus + Grafana | run 상태, 실패, freshness 관측 | local Docker dashboard |
+
+PySpark를 처리량 성과로 제시하지 않습니다. 현재 공개 Snapshot은 3개 지역·455개 도로 링크이며,
+이 프로젝트의 주된 검증 대상은 scheduling, source preservation, data contract, quality gate입니다.
 
 ## 실행
 
@@ -66,7 +95,7 @@ cp .env.example .env
 make live
 ```
 
-`make live`는 전체 서비스를 기동하고 실제 API 수집 → Spark → dbt → 게시 Gate까지 Airflow DAG로
+`make live`는 전체 서비스를 기동하고 실제 API 수집 → PySpark local 변환 → dbt → 게시 Gate까지 Airflow DAG로
 실행합니다.
 
 | 화면 | URL | 용도 |
@@ -126,6 +155,12 @@ make failure-drill
 - Docker Compose validation
 - GitHub Actions quality gate
 
+2026-08-28 장애복구 drill에서는 Bronze writer 중단 중 1,200개 event를 보존하고 재기동 후 17초에
+backlog를 회수했습니다. 첫 변환에서 104개 중복을 제거했으며 즉시 replay 입력은 0건이었습니다.
+이는 서울 API 처리량이 아니라 transport recovery 검증값입니다. 상세 수치는
+[runtime evidence](docs/evidence/README.md)와
+[drill 결과](docs/evidence/failure_drill_20260828.json)에 있습니다.
+
 ## 데이터 사용 범위
 
 - 저장된 도로 데이터는 서울특별시가 공개한 집계형 도로소통 정보이며 회사 내부 원천을 포함하지 않습니다.
@@ -134,3 +169,5 @@ make failure-drill
   자동 생성하지 않습니다.
 
 License: MIT. 외부 데이터에는 원 제공기관의 이용조건이 우선 적용됩니다.
+
+변경 이력은 [CHANGELOG](CHANGELOG.md)에 기록합니다.

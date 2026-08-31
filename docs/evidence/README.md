@@ -17,7 +17,7 @@ Reference Snapshot은 광화문·덕수궁, 강남 MICE 관광특구, 여의도 
 
 1. Airflow의 `sync_seoul_live_traffic` task가 공식 API를 호출합니다.
 2. landing JSON과 canonical Bronze Parquet의 object key가 run에 남습니다.
-3. Spark input·accepted·duplicate 수가 reconciliation을 만족합니다.
+3. PySpark `local[2]` input·accepted·duplicate 수가 reconciliation을 만족합니다.
 4. 서울 원천 전용 freshness를 포함한 dbt data test 28개와 source freshness가 통과합니다.
 5. Silver artifact별 row count, byte size, SHA-256가 manifest에 남습니다.
 6. Control Room의 source 기준시각·지역·도로 링크와 warehouse 값이 일치합니다.
@@ -26,6 +26,17 @@ Reference Snapshot은 광화문·덕수궁, 강남 MICE 관광특구, 여의도 
 `make live` 실행 결과는 환경·시각에 따라 달라지는 runtime artifact로 생성되며 Git에서 제외합니다.
 공개 저장소의 GIF/MP4는 같은 live run의 Control Room을 녹화한
 것이며 정적 mockup이 아닙니다.
+
+## Scheduled operation snapshot · 2026-08-31
+
+- Warehouse 누적 관측: 115,570행
+- 최근 실행: 10/10 `SUCCESS`, dbt `PASS` 10/10
+- 최신 run: 455 input = 455 accepted + 0 duplicate
+- 게시 판정: `READY`, gate 4/4 `PASS`
+
+원시 계측값은 [scheduled operation evidence](scheduled_operation_20260831.json)에 남겼습니다. 이는
+local Docker Compose에서 Airflow 15분 schedule을 유지한 결과이며, managed Airflow·분산 Spark·SLA
+운영 성과를 의미하지 않습니다.
 
 ## 별도 장애복구 검증
 

@@ -1,0 +1,27 @@
+{
+  "verified_at": "2026-08-31T07:21:54.083532Z",
+  "execution_scope": "local Docker Compose with Airflow 15-minute schedule",
+  "source": "서울특별시·서울 열린데이터광장 실시간 도시데이터·도로소통",
+  "warehouse_rows": 115570,
+  "area_count": 3,
+  "unique_links_latest": 455,
+  "recent_runs": {
+    "window": 10,
+    "success": 10,
+    "failed": 0,
+    "accepted_rows": 4550,
+    "dbt_pass": 10
+  },
+  "latest_run": {
+    "input_rows": 455,
+    "accepted_rows": 455,
+    "duplicates_removed": 0,
+    "output_objects": 4,
+    "dbt_status": "PASS",
+    "delivery_status": "READY",
+    "gate_passed": 4,
+    "gate_total": 4,
+    "pyspark_master": "local[2]"
+  },
+  "claim_boundary": "Local scheduled operation snapshot; not a managed Airflow, distributed Spark, SLA, or user-traffic claim."
+}

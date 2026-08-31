@@ -2,7 +2,7 @@ version: 2
 
 sources:
   - name: raw
-    description: "Spark가 event_id 기준으로 멱등 적재한 교통 관측 이벤트"
+    description: "PySpark local 변환이 event_id 기준으로 멱등 적재한 교통 관측 이벤트"
     schema: raw
     tables:
       - name: traffic_observation

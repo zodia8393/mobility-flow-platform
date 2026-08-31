@@ -11,7 +11,7 @@
 | Delivery readiness | `READY` | - | `BLOCKED` | row reconciliation → dbt → artifact hash 순서로 확인 |
 | Seoul API sync | every 15 min | 1 missed run | > 30 min | key·quota·upstream status 확인 |
 | Bronze upload | each successful sync | 1 retry | repeated failure | object-store health와 credential chain 확인 |
-| Spark job | ≤ 12 min | > 8 min | timeout 12 min | input object 수, skew, executor log 확인 |
+| PySpark local job | ≤ 12 min | > 8 min | timeout 12 min | input object 수와 executor log 확인 |
 
 ## Triage order
 
@@ -19,7 +19,7 @@
 2. Airflow Grid에서 최초 실패 task와 retry 횟수를 확인합니다.
 3. `/api/source`에서 마지막 서울 API Snapshot과 지역별 payload hash를 확인합니다.
 4. MinIO/S3의 마지막 landing·bronze object timestamp를 확인합니다.
-5. Spark run의 input/output row와 duplicate/late count를 대조합니다.
+5. PySpark local run의 input/output row와 duplicate/late count를 대조합니다.
 6. dbt test artifact에서 실패 SQL과 row를 확인합니다.
 7. delivery manifest의 output object count, row count, SHA-256를 확인합니다.
 
@@ -41,10 +41,10 @@ docker compose exec airflow-scheduler airflow dags trigger mobility_flow_15m
 ```
 
 - 서울 connector는 source response landing upload 후 canonical Bronze를 생성합니다.
-- Spark는 `ops.object_manifest`에 없는 object만 처리합니다.
+- PySpark local 변환은 `ops.object_manifest`에 없는 object만 처리합니다.
 - replay 중복은 `event_id`와 PostgreSQL `ON CONFLICT`로 제거합니다.
 - 서울 source payload SHA-256와 5분 Snapshot이 object key와 event ID에 반영됩니다.
-- 이미 성공한 run을 강제로 재처리할 때만 Spark API의 `force_reprocess=true`를 사용합니다.
+- 이미 성공한 run을 강제로 재처리할 때만 PySpark API의 `force_reprocess=true`를 사용합니다.
 
 ## Backfill
 
@@ -70,7 +70,7 @@ Drill은 다음을 자동 검증합니다.
 1. Bronze Writer를 중지한 상태에서 Kafka에 event를 적재합니다.
 2. Writer 재기동 후 stable consumer group이 backlog를 회수하는지 확인합니다.
 3. invalid event가 DLQ로 분리되는지 확인합니다.
-4. Spark job을 연속 두 번 실행해 두 번째 실행이 `NO_DATA`인지 확인합니다.
+4. PySpark local job을 연속 두 번 실행해 두 번째 실행이 `NO_DATA`인지 확인합니다.
 5. 결과와 recovery time을 runtime evidence artifact로 기록합니다.
 
 ## Delivery decision

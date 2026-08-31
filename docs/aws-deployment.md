@@ -40,7 +40,7 @@ AWS default credential chain을 사용합니다. `.env`나 Git에 credential을 
 
 ## Hybrid verification
 
-Airflow·Kafka·Spark는 local container에서 실행하되 bronze/silver object는 실제 S3 bucket에 적재할 수
+Airflow·Kafka·PySpark는 local container에서 실행하되 bronze/silver object는 실제 S3 bucket에 적재할 수
 있습니다. 다음 증거를 남깁니다.
 
 1. Terraform plan/apply output의 resource count

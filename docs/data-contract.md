@@ -28,7 +28,7 @@
 - API 응답 중 도로소통 영역을 변환 전에 `landing/seoul_citydata/`에 gzip JSON으로 보존합니다.
 - 서울시 응답에는 도로 링크별 별도 측정시각이 없으므로 `observed_at`은 retrieval time을 공식 갱신주기인
   5분 단위로 내린 Snapshot 기준시각입니다.
-- 동일 Snapshot의 재수집은 같은 `event_id`를 만들며 Spark와 PostgreSQL에서 중복을 제거합니다.
+- 동일 Snapshot의 재수집은 같은 `event_id`를 만들며 PySpark `local[2]`와 PostgreSQL에서 중복을 제거합니다.
 - `ingested_at - observed_at > 15 minutes`인 record는 삭제하지 않고 `is_late=true`로 보존합니다.
 
 ## 오류 처리

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="620" viewBox="0 0 1400 620" role="img" aria-labelledby="title desc">
   <title id="title">MobilityFlow Seoul live traffic architecture</title>
-  <desc id="desc">Seoul public API ingestion, raw preservation, S3 lake, Airflow, Spark, dbt marts, publishing gates and monitoring.</desc>
+  <desc id="desc">Seoul public API ingestion, raw preservation, Airflow, PySpark local transformation, dbt marts, publishing gates and monitoring.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#08142d"/><stop offset="1" stop-color="#102b54"/></linearGradient>
     <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#2563eb"/><stop offset="1" stop-color="#06b6d4"/></linearGradient>
@@ -48,9 +48,9 @@
   <g transform="translate(846 334)" filter="url(#shadow)">
     <rect width="266" height="126" rx="14" fill="#172c50" stroke="#36577f"/>
     <text x="20" y="32" fill="#72d5f6" font-family="Arial,sans-serif" font-size="11" font-weight="700">05 · PROCESSING</text>
-    <text x="20" y="63" fill="#fff" font-family="Arial,sans-serif" font-size="21" font-weight="700">Apache Spark</text>
+    <text x="20" y="63" fill="#fff" font-family="Arial,sans-serif" font-size="21" font-weight="700">PySpark local[2]</text>
     <text x="20" y="89" fill="#9db0cb" font-family="Arial,sans-serif" font-size="12">dedup · late data · official status</text>
-    <text x="20" y="108" fill="#6f89aa" font-family="Arial,sans-serif" font-size="11">object manifest + idempotent replay</text>
+    <text x="20" y="108" fill="#6f89aa" font-family="Arial,sans-serif" font-size="11">correctness scope · idempotent replay</text>
   </g>
   <path d="M836 397 H780" stroke="#5ca8ff" stroke-width="3" marker-end="url(#arrow)"/>
   <g transform="translate(524 334)" filter="url(#shadow)">
