@@ -38,6 +38,19 @@ Reference Snapshot은 광화문·덕수궁, 강남 MICE 관광특구, 여의도 
 local Docker Compose에서 Airflow 15분 schedule을 유지한 결과이며, managed Airflow·분산 Spark·SLA
 운영 성과를 의미하지 않습니다.
 
+## AWS hybrid deployment · 2026-08-31
+
+- Terraform: 25 added, 0 changed, 0 destroyed; post-apply drift 0
+- S3: 실제 서울 API raw 3개·Bronze 3개를 포함한 13 objects, versioning·AES-256·public block 4/4
+- ECR: 4 repositories와 단일 `linux/amd64` image, scan 4/4 complete
+- CloudWatch: 실제 pipeline metric 4개, deployment log, freshness·DQ alarm `OK`
+- ECS: cluster와 capacity provider 배포, running task 0
+
+ECR scan이 upstream base package의 critical finding을 보고해 runtime promotion을 중단했습니다. 따라서
+이는 AWS S3/ECR/CloudWatch와 infrastructure control을 검증한 hybrid deployment이며 Airflow·dbt·PySpark
+runtime을 AWS에서 운영했다는 주장이 아닙니다. 계정·bucket·repository URL·ARN을 제거한 계측값은
+[sanitized evidence](aws_deployment_20260831.json)에 있습니다.
+
 ## 별도 장애복구 검증
 
 `failure_drill_20260828.json`은 live source 값이 아니라 pipeline transport의 장애복구 시험 결과입니다.

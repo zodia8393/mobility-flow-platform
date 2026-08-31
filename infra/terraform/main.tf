@@ -142,8 +142,11 @@ resource "aws_cloudwatch_metric_alarm" "freshness" {
   threshold           = 1800
   comparison_operator = "GreaterThanThreshold"
   treat_missing_data  = "breaching"
-  alarm_actions       = [aws_sns_topic.operations.arn]
-  ok_actions          = [aws_sns_topic.operations.arn]
+  dimensions = {
+    Environment = var.environment
+  }
+  alarm_actions = [aws_sns_topic.operations.arn]
+  ok_actions    = [aws_sns_topic.operations.arn]
 }
 
 resource "aws_cloudwatch_metric_alarm" "quality" {
@@ -157,7 +160,10 @@ resource "aws_cloudwatch_metric_alarm" "quality" {
   threshold           = 0
   comparison_operator = "GreaterThanThreshold"
   treat_missing_data  = "notBreaching"
-  alarm_actions       = [aws_sns_topic.operations.arn]
+  dimensions = {
+    Environment = var.environment
+  }
+  alarm_actions = [aws_sns_topic.operations.arn]
 }
 
 resource "aws_cloudwatch_dashboard" "operations" {
@@ -168,21 +174,21 @@ resource "aws_cloudwatch_dashboard" "operations" {
         type = "metric", x = 0, y = 0, width = 8, height = 6,
         properties = {
           title   = "Pipeline freshness", region = var.aws_region, view = "singleValue",
-          metrics = [["MobilityFlow/Pipeline", "FreshnessSeconds"]], period = 300, stat = "Maximum"
+          metrics = [["MobilityFlow/Pipeline", "FreshnessSeconds", "Environment", var.environment]], period = 300, stat = "Maximum"
         }
       },
       {
         type = "metric", x = 8, y = 0, width = 8, height = 6,
         properties = {
           title   = "Data quality failures", region = var.aws_region, view = "singleValue",
-          metrics = [["MobilityFlow/Pipeline", "DataQualityFailures"]], period = 300, stat = "Sum"
+          metrics = [["MobilityFlow/Pipeline", "DataQualityFailures", "Environment", var.environment]], period = 300, stat = "Sum"
         }
       },
       {
         type = "metric", x = 16, y = 0, width = 8, height = 6,
         properties = {
           title   = "Job duration", region = var.aws_region,
-          metrics = [["MobilityFlow/Pipeline", "JobDurationSeconds"]], period = 300, stat = "p95"
+          metrics = [["MobilityFlow/Pipeline", "JobDurationSeconds", "Environment", var.environment]], period = 300, stat = "p95"
         }
       },
       {

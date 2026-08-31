@@ -51,6 +51,26 @@ local Docker Compose에서 Airflow 15분 schedule을 유지한 시점의 운영 
 [Control Room](docs/control-room.png)에 남겼습니다. 이 수치는 local scheduled operation이며 managed
 Airflow나 분산 Spark 운영 성과로 확대하지 않습니다.
 
+### AWS hybrid deployment · 2026-08-31
+
+기존 AWS credential chain을 사용해 `ap-northeast-2`에 S3 data lake, ECR 4개 repository, ECS cluster,
+CloudWatch dashboard·alarm·log group과 IAM role을 Terraform으로 배포했습니다. 같은 시점의 실제 서울
+API 455행을 AWS S3의 raw 3개·Bronze 3개 object로 적재하고 local pipeline의 측정 metric 4개를
+CloudWatch에 게시했습니다.
+
+| 항목 | 확인값 |
+|---|---:|
+| Terraform apply | 25 added · 0 changed · 0 destroyed |
+| S3 | 13 objects · versioning · AES-256 · public block 4/4 |
+| ECR | 4 repositories · immutable image · scan complete |
+| CloudWatch | 4 metrics · freshness/DQ alarm `OK` |
+| ECS | cluster 배포 · running task 0 |
+
+ECR scan에서 upstream base package의 critical finding이 확인돼 ECS runtime 승격은 중단했습니다. 따라서
+AWS에서 실제로 검증한 범위는 S3 ingestion, image registry, metric·alarm·log와 infrastructure state이며,
+Airflow·PostgreSQL/dbt·PySpark 실행은 계속 local Docker 범위입니다. 계정·bucket·ARN을 제거한 결과는
+[AWS deployment evidence](docs/evidence/aws_deployment_20260831.json)에 남겼습니다.
+
 데이터 제공처는 [서울시 실시간 도시데이터](https://data.seoul.go.kr/SeoulRtd/)이며,
 [서울 열린데이터광장 데이터셋](https://data.seoul.go.kr/dataList/OA-21285/A/1/datasetView.do)의
 이용정책과 출처표시 조건을 따릅니다. 서울시는 도로소통 데이터의 갱신주기를 5분으로 안내합니다.
@@ -81,6 +101,7 @@ Seoul Real-Time City Data API
 | PySpark `local[2]` | Bronze 변환, dedup, late-event 분리 | 변환 정확성과 idempotent replay |
 | PostgreSQL + dbt | Silver mart, relationship·freshness test | 실제 서울 API Snapshot과 CI |
 | Prometheus + Grafana | run 상태, 실패, freshness 관측 | local Docker dashboard |
+| AWS | S3 lake, ECR, ECS cluster, CloudWatch, IAM | 실제 배포·live object·metric·alarm, running task 0 |
 
 PySpark를 처리량 성과로 제시하지 않습니다. 현재 공개 Snapshot은 3개 지역·455개 도로 링크이며,
 이 프로젝트의 주된 검증 대상은 scheduling, source preservation, data contract, quality gate입니다.
@@ -131,7 +152,8 @@ make sync
 ## Cloud 배포 경계
 
 Local MinIO와 AWS S3는 같은 storage adapter를 사용합니다. Terraform은 versioning/encryption이
-적용된 S3, ECR, ECS, CloudWatch dashboard·alarm, SNS와 least-privilege IAM을 선언합니다.
+적용된 S3, ECR, ECS, CloudWatch dashboard·alarm, SNS와 least-privilege IAM을 선언하며 2026-08-31
+`dev` baseline에 실제 적용했습니다.
 
 ```bash
 cd infra/terraform
@@ -165,8 +187,8 @@ backlog를 회수했습니다. 첫 변환에서 104개 중복을 제거했으며
 
 - 저장된 도로 데이터는 서울특별시가 공개한 집계형 도로소통 정보이며 회사 내부 원천을 포함하지 않습니다.
 - `observed_at`은 API에 별도 측정시각이 없어 수집시각을 5분 단위로 내린 Snapshot 기준시각입니다.
-- Terraform은 S3·ECR·ECS·CloudWatch·IAM resource를 선언하지만 기본 설정에서는 AWS resource를
-  자동 생성하지 않습니다.
+- Terraform apply로 생성한 AWS baseline은 account ID·bucket·ARN을 공개하지 않으며, ECS runtime task는
+  ECR security gate를 통과하기 전까지 실행하지 않습니다.
 
 License: MIT. 외부 데이터에는 원 제공기관의 이용조건이 우선 적용됩니다.
 

@@ -13,6 +13,16 @@ Terraform baseline은 다음 resource를 만듭니다.
 RDS, MSK, always-on ECS service는 default로 만들지 않습니다. 개발·검증 단계의 상시 비용을
 피하면서 실제 S3 integration과 operations telemetry를 확인하기 위한 범위입니다.
 
+## Deployed baseline · 2026-08-31
+
+`ap-northeast-2`의 `dev` environment에 baseline을 적용했습니다. 실제 서울 API 455행의 raw·Bronze
+object를 S3 adapter로 적재하고 local pipeline의 warehouse·freshness·DQ·duration metric을 CloudWatch에
+게시했습니다. Terraform post-apply plan은 drift 0이었습니다.
+
+ECR scan 4/4는 완료됐지만 critical finding이 있어 ECS task promotion을 차단했습니다. ECS cluster는
+존재하되 running task는 0이며, 기존 EC2 instance는 변경하지 않았습니다. 공개 가능한 검증값은
+[AWS deployment evidence](evidence/aws_deployment_20260831.json)에 있습니다.
+
 ## Preflight
 
 ```bash
@@ -47,6 +57,10 @@ Airflow·Kafka·PySpark는 local container에서 실행하되 bronze/silver obje
 2. S3 object의 prefix, size, encryption, versioning 상태
 3. CloudWatch custom metric과 alarm state
 4. 동일 run의 Airflow log, DB row count, evidence JSON
+
+현재 hybrid 실행은 Airflow·PostgreSQL/dbt·PySpark를 local Docker에서 수행하고, 측정된 raw/Bronze
+artifact와 metric·log를 AWS에 게시합니다. AWS runtime으로 확대할 때는 ECR critical finding 해소 후
+task definition·network·managed database를 별도 설계해야 합니다.
 
 Account ID, access key, secret, internal endpoint는 screenshot과 공유 artifact에서 제거합니다.
 

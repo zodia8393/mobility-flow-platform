@@ -1,0 +1,60 @@
+{
+  "verified_at": "2026-08-31T08:02:55.549399Z",
+  "region": "ap-northeast-2",
+  "environment": "dev",
+  "terraform": {
+    "added": 25,
+    "changed": 0,
+    "destroyed": 0,
+    "post_apply_drift": 0,
+    "existing_ec2_changed": false
+  },
+  "s3": {
+    "objects": 13,
+    "bytes": 1401362,
+    "live_sync": {
+      "input_rows": 455,
+      "accepted_rows": 455,
+      "rejected_rows": 0,
+      "raw_objects": 3,
+      "bronze_objects": 3
+    },
+    "versioning": "Enabled",
+    "encryption": "AES256",
+    "public_access_blocks": 4
+  },
+  "ecr": {
+    "repositories": 4,
+    "scans_complete": 4,
+    "runtime_promotion": "BLOCKED",
+    "block_reason": "Critical findings in upstream base packages; no fixed version was reported at verification time."
+  },
+  "cloudwatch": {
+    "metrics": 4,
+    "log_streams": 1,
+    "warehouse_rows": 116025,
+    "freshness_seconds": 197.2,
+    "freshness_alarm": "OK",
+    "data_quality_alarm": "OK"
+  },
+  "ecs": {
+    "cluster": "DEPLOYED",
+    "running_tasks": 0
+  },
+  "local_pipeline": {
+    "latest_run": "SUCCESS",
+    "input_rows": 455,
+    "accepted_rows": 455,
+    "duplicates_removed": 0,
+    "dbt_status": "PASS",
+    "delivery_status": "READY"
+  },
+  "redacted_fields": [
+    "account_id",
+    "bucket_name",
+    "repository_url",
+    "resource_arn",
+    "credential"
+  ],
+  "claim_boundary": "AWS hybrid baseline: real S3 ingestion, ECR images and scans, ECS cluster, CloudWatch metrics, alarms and logs. Airflow, PostgreSQL/dbt and PySpark runtime remained local; no ECS task or managed Airflow operation is claimed."
+}
