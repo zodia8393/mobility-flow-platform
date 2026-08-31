@@ -354,7 +354,7 @@ def sync_seoul_citydata(
         "congestion_counts": dict(sorted(status_counts.items())),
         "raw_objects": raw_objects,
         "bronze_objects": bronze_objects,
-        "snapshot_output": str(snapshot_output) if snapshot_output else None,
+        "snapshot_written": snapshot_output is not None,
         "snapshot_sha256": snapshot_sha256,
         "snapshot_bytes": snapshot_bytes,
         "duration_seconds": round(time.monotonic() - started, 3),

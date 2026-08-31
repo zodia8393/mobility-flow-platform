@@ -28,9 +28,7 @@
 Object store에 적재하지 않고 서울 API 응답과 contract만 확인할 수 있습니다.
 
 ```bash
-uv run mobility-seoul-sync --no-upload \
-  --snapshot-output /tmp/seoul-traffic.parquet \
-  --report /tmp/seoul-source-manifest.json
+uv run mobility-seoul-sync --no-upload
 ```
 
 `accepted_rows + rejected_rows = input_rows`를 확인하고 reject가 있으면 원천 링크 ID와 사유를
@@ -73,7 +71,7 @@ Drill은 다음을 자동 검증합니다.
 2. Writer 재기동 후 stable consumer group이 backlog를 회수하는지 확인합니다.
 3. invalid event가 DLQ로 분리되는지 확인합니다.
 4. Spark job을 연속 두 번 실행해 두 번째 실행이 `NO_DATA`인지 확인합니다.
-5. 결과와 recovery time을 `docs/evidence/generated/failure_drill.json`에 기록합니다.
+5. 결과와 recovery time을 runtime evidence artifact로 기록합니다.
 
 ## Delivery decision
 

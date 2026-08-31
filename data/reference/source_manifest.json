@@ -1,6 +1,6 @@
 {
   "status": "VALIDATED",
-  "sync_id": "seoul-72e2aae32039587e3367",
+  "sync_id": "seoul-78433173c4a7b54cfba8",
   "source": "서울시 실시간 도시데이터·도로소통",
   "dataset_url": "https://data.seoul.go.kr/dataList/OA-21285/A/1/datasetView.do",
   "source_url": "https://data.seoul.go.kr/SeoulRtd/",
@@ -43,7 +43,7 @@
   },
   "raw_objects": [],
   "bronze_objects": [],
-  "snapshot_output": "data/reference/seoul_traffic_latest.parquet",
+  "snapshot_written": true,
   "snapshot_sha256": "abf3ce20891b6b810ca6abf3372d6c588c30add908b62dfb2ce7d906ece40930",
   "snapshot_bytes": 52365,
   "duration_seconds": 0.61,

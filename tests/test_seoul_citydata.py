@@ -64,6 +64,8 @@ def test_live_source_is_preserved_and_normalized_without_invented_metrics(tmp_pa
     assert report["input_rows"] == report["accepted_rows"] == 1
     assert report["rejected_rows"] == 0
     assert report["congestion_counts"] == {"SLOW": 1}
+    assert report["snapshot_written"] is True
+    assert "snapshot_output" not in report
     assert len(report["raw_objects"]) == len(report["bronze_objects"]) == 1
 
     raw_key = report["raw_objects"][0]

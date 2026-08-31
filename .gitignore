@@ -19,3 +19,4 @@ infra/terraform/*.tfstate
 infra/terraform/*.tfstate.*
 infra/terraform/*.tfplan
 docs/evidence/generated/
+docs/progress/

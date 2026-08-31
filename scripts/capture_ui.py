@@ -116,10 +116,10 @@ def main() -> None:
     frames_dir = Path(tempfile.mkdtemp(prefix="mobilityflow-capture-"))
     screenshot_path = capture_frames(args, frames_dir)
     mp4_path, gif_path = encode_video(args, frames_dir)
-    print(f"screenshot={screenshot_path}")
-    print(f"mp4={mp4_path}")
-    print(f"gif={gif_path}")
-    print(f"frames={frames_dir}")
+    print(
+        "Control Room capture complete: "
+        f"{screenshot_path.name}, {mp4_path.name}, {gif_path.name}"
+    )
 
 
 if __name__ == "__main__":

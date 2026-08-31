@@ -22,7 +22,7 @@ API에 존재하지 않는 교통량이나 기준속도는 임의로 채우지 �
 
 ## 현재 저장된 실제 데이터
 
-`data/reference/seoul_traffic_latest.parquet`는 서울시 API에서 직접 수집한 공개 데이터 Snapshot입니다.
+[공개 Snapshot](data/reference/seoul_traffic_latest.parquet)은 서울시 API에서 직접 수집한 데이터입니다.
 
 | 항목 | 값 |
 |---|---:|
@@ -32,8 +32,7 @@ API에 존재하지 않는 교통량이나 기준속도는 임의로 채우지 �
 | 검증 통과 | 455개 |
 | 격리 | 0개 |
 
-원천별 payload hash와 수집 조건은
-[`data/reference/source_manifest.json`](data/reference/source_manifest.json)에 기록되어 있습니다.
+원천별 payload hash와 수집 조건은 [수집 Manifest](data/reference/source_manifest.json)에서 확인할 수 있습니다.
 
 데이터 제공처는 [서울시 실시간 도시데이터](https://data.seoul.go.kr/SeoulRtd/)이며,
 [서울 열린데이터광장 데이터셋](https://data.seoul.go.kr/dataList/OA-21285/A/1/datasetView.do)의
@@ -86,15 +85,6 @@ make sync
 
 실제 Control Room을 같은 방식으로 다시 녹화하려면 서비스 실행 후 `make capture`를 실행합니다.
 
-Object store에 적재하지 않고 공식 API 응답만 검증·보관할 수도 있습니다.
-
-```bash
-uv run mobility-seoul-sync \
-  --no-upload \
-  --snapshot-output data/reference/seoul_traffic_latest.parquet \
-  --report data/reference/source_manifest.json
-```
-
 ## 운영 안전장치
 
 - **Source preservation:** 필요한 도로소통 응답을 변환 전에 gzip JSON으로 보존
@@ -135,19 +125,6 @@ make failure-drill
 - Terraform fmt/init/validate
 - Docker Compose validation
 - GitHub Actions quality gate
-
-## Repository map
-
-```text
-airflow/dags/              official API sync → Spark → dbt orchestration
-data/reference/            attributed real public-data Snapshot and manifest
-dbt/                       staging, incremental fact, marts and tests
-infra/terraform/           AWS deployment baseline
-monitoring/                Prometheus and Grafana provisioning
-src/mobility_flow/         live connector, ingestion, Spark runner and API
-docs/                      contracts, runbook, architecture and execution video
-tests/                     deterministic contract and failure tests
-```
 
 ## 데이터 사용 범위
 

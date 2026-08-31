@@ -60,4 +60,4 @@ docker compose run --rm -T producer mobility-evidence \
 printf 'Control Room: http://localhost:18000\n'
 printf 'Airflow:      http://localhost:18080\n'
 printf 'Grafana:      http://localhost:13000\n'
-printf 'Evidence:     %s\n' "$evidence_dir/live_run.json"
+printf 'Evidence manifest generated.\n'

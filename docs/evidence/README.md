@@ -6,8 +6,8 @@
 - 데이터셋: 서울시 실시간 도시데이터·도로소통
 - 수집 방식: API key를 환경변수로 주입한 live request
 - 원천 보존: 도로소통 response gzip JSON + payload SHA-256
-- 변환 결과: `data/reference/seoul_traffic_latest.parquet`
-- Manifest: `data/reference/source_manifest.json`
+- 변환 결과: [공개 Snapshot](../../data/reference/seoul_traffic_latest.parquet)
+- 수집 근거: [Manifest](../../data/reference/source_manifest.json)
 
 Reference Snapshot은 광화문·덕수궁, 강남 MICE 관광특구, 여의도 3개 지역의 실제 도로 링크
 455개를 포함하며 455개 모두 contract 검증을 통과했습니다. API에 없는 기준속도와 교통량은
@@ -23,8 +23,8 @@ Reference Snapshot은 광화문·덕수궁, 강남 MICE 관광특구, 여의도 
 6. Control Room의 source 기준시각·지역·도로 링크와 warehouse 값이 일치합니다.
 7. source object, reconciliation, dbt, artifact hash가 모두 PASS일 때만 `READY`입니다.
 
-`make live` 실행 결과는 `docs/evidence/generated/live_run.json`에 생성되며 환경·시각에 따라
-달라지므로 Git에서 제외합니다. 공개 저장소의 GIF/MP4는 같은 live run의 Control Room을 녹화한
+`make live` 실행 결과는 환경·시각에 따라 달라지는 runtime artifact로 생성되며 Git에서 제외합니다.
+공개 저장소의 GIF/MP4는 같은 live run의 Control Room을 녹화한
 것이며 정적 mockup이 아닙니다.
 
 ## 별도 장애복구 검증
