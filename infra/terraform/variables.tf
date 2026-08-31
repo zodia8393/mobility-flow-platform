@@ -43,3 +43,14 @@ variable "log_retention_days" {
     error_message = "Use a supported CloudWatch retention period."
   }
 }
+
+variable "runtime_image_tag" {
+  description = "Immutable ECR image tag used by the one-shot Fargate runtime check."
+  type        = string
+  default     = "v0.1.2-r7-amd64"
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$", var.runtime_image_tag))
+    error_message = "runtime_image_tag must be an ECR-compatible immutable tag."
+  }
+}

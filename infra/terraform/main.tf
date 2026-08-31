@@ -259,3 +259,40 @@ resource "aws_iam_role_policy" "pipeline_task" {
   role   = aws_iam_role.pipeline_task.id
   policy = data.aws_iam_policy_document.pipeline_task.json
 }
+
+resource "aws_ecs_task_definition" "runtime_check" {
+  family                   = "${local.name}-runtime-check"
+  requires_compatibilities = ["FARGATE"]
+  network_mode             = "awsvpc"
+  cpu                      = 256
+  memory                   = 512
+  execution_role_arn       = aws_iam_role.ecs_execution.arn
+  task_role_arn            = aws_iam_role.pipeline_task.arn
+
+  runtime_platform {
+    operating_system_family = "LINUX"
+    cpu_architecture        = "X86_64"
+  }
+
+  container_definitions = jsonencode([
+    {
+      name      = "runtime-check"
+      image     = "${aws_ecr_repository.service["api"].repository_url}:${var.runtime_image_tag}"
+      essential = true
+      command   = ["mobility-runtime-check"]
+      environment = [
+        { name = "APP_ENV", value = var.environment },
+        { name = "AWS_REGION", value = var.aws_region },
+        { name = "S3_BUCKET", value = aws_s3_bucket.lake.id }
+      ]
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = aws_cloudwatch_log_group.platform.name
+          awslogs-region        = var.aws_region
+          awslogs-stream-prefix = "runtime-check"
+        }
+      }
+    }
+  ])
+}

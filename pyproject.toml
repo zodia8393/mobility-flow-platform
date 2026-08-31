@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mobility-flow"
-version = "0.1.0"
+version = "0.1.2"
 description = "Operational pipeline for Seoul public real-time road traffic data"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -20,14 +20,14 @@ dependencies = [
   "orjson>=3.10,<4",
   "prometheus-client>=0.21,<1",
   "psycopg[binary,pool]>=3.2,<4",
-  "pyarrow>=18,<23",
+  "pyarrow>=23.0.1,<24",
   "pydantic-settings>=2.7,<3",
   "tenacity>=9,<10",
   "uvicorn[standard]>=0.34,<1",
 ]
 
 [project.optional-dependencies]
-spark = ["pyspark==3.5.6"]
+spark = ["pyspark==4.2.0"]
 dev = [
   "playwright>=1.49,<2",
   "pytest>=8.3,<9",
@@ -41,6 +41,7 @@ mobility-bronze-writer = "mobility_flow.bronze_writer:main"
 mobility-evidence = "mobility_flow.evidence:main"
 mobility-failure-report = "mobility_flow.failure_report:main"
 mobility-cloudwatch-publish = "mobility_flow.cloud_publish:main"
+mobility-runtime-check = "mobility_flow.runtime_check:main"
 mobility-ingest-file = "mobility_flow.batch_ingest:main"
 mobility-seoul-sync = "mobility_flow.seoul_citydata:main"
 

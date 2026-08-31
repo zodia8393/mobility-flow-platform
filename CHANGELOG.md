@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.2 · 2026-08-31
+
+- 배포 application image를 digest-pinned Wolfi·Python 3.12 base로 교체
+- ECR native scan 4/4 OS finding 0, 배포 app Trivy critical/high 0 확인
+- S3 object byte-read와 CloudWatch metric publish를 검증하는 Fargate one-shot task 추가
+- Fargate runtime check 4회 exit code 0, CloudWatch `CloudRuntimeHealthy` 기록
+- PySpark image는 upstream JAR finding이 남아 local-only 경계 유지
+- Terraform task definition 적용 후 post-apply drift 0 검증
+
 ## 0.1.1 · 2026-08-31
 
 - AWS S3·ECR·ECS cluster·CloudWatch·IAM baseline 25개 resource 실제 배포

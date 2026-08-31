@@ -19,3 +19,8 @@ output "pipeline_task_role_arn" {
 output "cloudwatch_dashboard_name" {
   value = aws_cloudwatch_dashboard.operations.dashboard_name
 }
+
+output "runtime_check_task_family" {
+  description = "One-shot Fargate task used to verify ECR pull, S3 read and CloudWatch publish."
+  value       = aws_ecs_task_definition.runtime_check.family
+}

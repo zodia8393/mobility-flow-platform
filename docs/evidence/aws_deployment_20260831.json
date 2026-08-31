@@ -1,5 +1,5 @@
 {
-  "verified_at": "2026-08-31T08:02:55.549399Z",
+  "verified_at": "2026-08-31T09:18:01Z",
   "region": "ap-northeast-2",
   "environment": "dev",
   "terraform": {
@@ -7,7 +7,9 @@
     "changed": 0,
     "destroyed": 0,
     "post_apply_drift": 0,
-    "existing_ec2_changed": false
+    "existing_ec2_changed": false,
+    "runtime_task_definition_added": 1,
+    "current_state_addresses": 29
   },
   "s3": {
     "objects": 13,
@@ -26,20 +28,48 @@
   "ecr": {
     "repositories": 4,
     "scans_complete": 4,
-    "runtime_promotion": "BLOCKED",
-    "block_reason": "Critical findings in upstream base packages; no fixed version was reported at verification time."
+    "runtime_image": "digest-pinned Wolfi and Python 3.12 application image",
+    "runtime_tag": "v0.1.2-r7-amd64",
+    "runtime_promotion": "PASSED_APP_ONLY",
+    "native_os_findings": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0
+    },
+    "trivy_deployed_app": {
+      "version": "0.74.0",
+      "critical": 0,
+      "high": 0
+    },
+    "local_spark_boundary": {
+      "cloud_promoted": false,
+      "critical": 1,
+      "high": 34,
+      "reason": "Bundled upstream PySpark JAR findings require a compatible upstream refresh."
+    }
   },
   "cloudwatch": {
-    "metrics": 4,
-    "log_streams": 1,
+    "metrics": 5,
+    "log_streams": 5,
     "warehouse_rows": 116025,
     "freshness_seconds": 197.2,
     "freshness_alarm": "OK",
-    "data_quality_alarm": "OK"
+    "data_quality_alarm": "OK",
+    "cloud_runtime_healthy": 1
   },
   "ecs": {
     "cluster": "DEPLOYED",
-    "running_tasks": 0
+    "running_tasks": 0,
+    "task_mode": "Fargate one-shot",
+    "successful_runtime_checks": 4,
+    "latest_exit_code": 0,
+    "verified_permissions": [
+      "ECR image pull",
+      "S3 object list and ranged byte-read",
+      "CloudWatch metric publish",
+      "CloudWatch log publish"
+    ]
   },
   "local_pipeline": {
     "latest_run": "SUCCESS",
@@ -56,5 +86,5 @@
     "resource_arn",
     "credential"
   ],
-  "claim_boundary": "AWS hybrid baseline: real S3 ingestion, ECR images and scans, ECS cluster, CloudWatch metrics, alarms and logs. Airflow, PostgreSQL/dbt and PySpark runtime remained local; no ECS task or managed Airflow operation is claimed."
+  "claim_boundary": "AWS hybrid deployment: real S3 ingestion, zero-finding ECR native OS scans, Trivy critical/high zero for the deployed application image, successful Fargate one-shot runtime checks, CloudWatch metrics, alarms and logs. Airflow, PostgreSQL/dbt and PySpark runtime remained local; the Spark image was not cloud-promoted and no always-on ECS service or managed Airflow operation is claimed."
 }

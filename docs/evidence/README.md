@@ -42,13 +42,15 @@ local Docker Compose에서 Airflow 15분 schedule을 유지한 결과이며, man
 
 - Terraform: 25 added, 0 changed, 0 destroyed; post-apply drift 0
 - S3: 실제 서울 API raw 3개·Bronze 3개를 포함한 13 objects, versioning·AES-256·public block 4/4
-- ECR: 4 repositories와 단일 `linux/amd64` image, scan 4/4 complete
-- CloudWatch: 실제 pipeline metric 4개, deployment log, freshness·DQ alarm `OK`
-- ECS: cluster와 capacity provider 배포, running task 0
+- ECR: repository 4개, native scan 4/4 OS package finding 0, 배포 app Trivy critical/high 0
+- CloudWatch: 실제 pipeline metric 5개, Fargate log, freshness·DQ alarm `OK`
+- ECS: Fargate one-shot runtime check 4회 exit code 0
 
-ECR scan이 upstream base package의 critical finding을 보고해 runtime promotion을 중단했습니다. 따라서
-이는 AWS S3/ECR/CloudWatch와 infrastructure control을 검증한 hybrid deployment이며 Airflow·dbt·PySpark
-runtime을 AWS에서 운영했다는 주장이 아닙니다. 계정·bucket·repository URL·ARN을 제거한 계측값은
+초기 base image의 critical finding으로 runtime promotion을 중단한 뒤 배포 app을 Wolfi base로 재구축해
+Trivy critical/high 0건을 확인했습니다. Fargate task는 ECR image를 pull하고 S3 object의 첫 byte를 읽은 뒤
+`CloudRuntimeHealthy` metric을 게시했습니다. PySpark image는 upstream JAR finding이 남아 있어 local 검증
+범위로 고정했습니다. Airflow·dbt·PySpark runtime 또는 always-on service를 AWS에서 운영했다는 주장은
+아닙니다. 계정·bucket·repository URL·ARN을 제거한 계측값은
 [sanitized evidence](aws_deployment_20260831.json)에 있습니다.
 
 ## 별도 장애복구 검증

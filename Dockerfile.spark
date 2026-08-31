@@ -1,14 +1,18 @@
-FROM python:3.12-slim-bookworm
+FROM cgr.dev/chainguard/wolfi-base@sha256:e624c5d5e42382ce7165ddafcbbf8e6769a24cbd02ea6114b880b05ae5ba2a8d
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 \
+    JAVA_HOME=/usr/lib/jvm/java-17-openjdk \
     SPARK_LOCAL_DIRS=/tmp/spark
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends openjdk-17-jre-headless procps curl \
-    && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache \
+    python-3.12 \
+    py3.12-pip \
+    ca-certificates \
+    openjdk-17-jre \
+    procps \
+    curl
 
 WORKDIR /app
 COPY pyproject.toml README.md ./
@@ -19,7 +23,7 @@ RUN mkdir -p src/mobility_flow \
 COPY src ./src
 RUN pip install --no-deps --force-reinstall .
 
-RUN useradd --create-home --uid 10001 appuser \
+RUN adduser -D -u 10001 appuser \
     && mkdir -p /tmp/spark \
     && chown -R appuser:appuser /tmp/spark
 USER appuser
