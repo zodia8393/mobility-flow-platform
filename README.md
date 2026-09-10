@@ -17,7 +17,11 @@
 - PySpark `local[2]` 변환 단계가 새 Bronze object만 읽어 `event_id` 중복을 제거하고 PostgreSQL에
   멱등 적재합니다. 이 단계는 분산 성능 주장이 아니라 변환·재실행 계약을 검증하는 범위입니다.
 - dbt가 서울 원천 전용 freshness를 포함한 28개 data test와 source freshness를 통과한 경우에만 최신 mart를 공개합니다.
-- row reconciliation과 Silver artifact hash까지 모두 통과해야 Control Room이 `READY`를 표시합니다.
+- 처리 기록의 원본 객체 수, 행수 대조, dbt 결과, Silver 파일별 해시 기록을 확인해 `READY`를 표시합니다.
+
+`READY`의 해시 조건은 목록 개수와 값의 존재를 확인합니다. 업로드한 객체를 다시 읽어 해시가
+일치하는지 재검증하는 기능은 아닙니다. `observed_at`도 원천의 실제 관측시각이 아니라 수집시각을
+5분 단위로 내린 값이므로, freshness는 이 수집 기준시각의 경과를 확인하는 범위입니다.
 
 API에 존재하지 않는 교통량이나 기준속도는 임의로 채우지 않습니다. 해당 필드는 `NULL`로 보존하고
 정체 상태는 서울시가 제공한 `원활·서행·정체` 값을 그대로 표준화합니다.
@@ -92,8 +96,13 @@ Seoul Real-Time City Data API
   → Control Room + Prometheus + Grafana
 ```
 
-각 source response와 Bronze/Silver artifact는 run 단위로 추적할 수 있습니다. 같은 5분 Snapshot을
-다시 받아도 `area_code + LINK_ID + snapshot_at` 기반 `event_id`가 같아 중복 적재되지 않습니다.
+각 source response와 Bronze/Silver artifact는 run 단위로 추적할 수 있습니다. 같은 5분 수집 구간의
+지역·도로는 `area_code + LINK_ID + snapshot_at` 기반 `event_id`가 같아 중복 행이 추가되지 않습니다.
+실제 관측시각이 없어 같은 원천 관측을 다음 수집 구간에 다시 받는 것까지 식별하지는 못합니다.
+
+관측 데이터 upsert와 처리 완료 파일 기록은 같은 PostgreSQL 트랜잭션에서 확정합니다. 확정 전
+실패하면 둘 다 취소되고, 확정 후 재실행하면 완료 파일을 제외합니다. dbt의 사실 테이블은
+`event_id` 한 건, 도로 기준정보는 `segment_id` 한 건을 단위로 구성했습니다.
 
 ## 기술 선택과 실행 범위
 
@@ -144,7 +153,7 @@ make sync
 - **Quarantine:** 좌표·속도·거리·schema 오류를 원천 링크와 사유가 포함된 object로 격리
 - **Quality gate:** `unique`, `not_null`, `relationships`, `accepted_values`, reconciliation SQL
 - **Freshness:** warning 15분, failure 30분
-- **Publishing gate:** source object, row reconciliation, dbt PASS, artifact SHA-256가 모두 필요
+- **Publishing gate:** 처리 기록의 source object 수, row reconciliation, dbt PASS, artifact 해시 목록 확인; 저장 후 read-back 검증 아님
 - **Recovery:** Airflow retry/timeout, 새 object만 처리, 동일 run replay 안전성
 - **Observability:** Prometheus target과 provisioned Grafana dashboard
 
