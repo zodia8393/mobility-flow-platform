@@ -4,6 +4,26 @@
 판정까지 수행하는 데이터 파이프라인입니다. Airflow가 수집·재실행을 조정하고 PostgreSQL/dbt가
 모델과 품질 기준을 관리합니다.
 
+## 빠르게 확인하기
+
+- **문제:** 반복 수집에서 같은 자료가 다시 들어오거나 저장이 중단될 때, 이미 처리한 자료와 다시 처리할 자료를 구분해야 합니다.
+- **구현:** 수집 원문 보존, 입력 표준화, PostgreSQL의 원천 행·완료 기록 트랜잭션, dbt 검사로 처리 단계를 연결했습니다.
+- **검증:** 2026.08.31 보존 기록의 누적 115,570행·최근 실행 10/10 성공과 별도 중단·복구 시험을 제공합니다. 개인 환경의 기록이며 현재 서비스 상태나 기업 비용 절감 실적이 아닙니다.
+- **읽는 순서:** [코드 구성](#코드-읽는-순서) → [실행 방법](#실행) → [검증](#검증) → [작업 과정과 시각자료](https://zodia8393.github.io/career-portfolio/mobility/).
+
+## 코드 읽는 순서
+
+| 순서 | 코드 | 확인할 설계 | 관련 테스트 |
+| --- | --- | --- | --- |
+| 1 | [seoul_citydata.py](src/mobility_flow/seoul_citydata.py) | 원천 응답을 공통 필드와 식별키로 변환 | [원천 변환 테스트](tests/test_seoul_citydata.py) |
+| 2 | [batch_ingest.py](src/mobility_flow/batch_ingest.py) | 필수 항목·열 매핑·파일 읽기 책임 분리 | [입력 계약 테스트](tests/test_batch_ingest.py) |
+| 3 | [database.py](src/mobility_flow/database.py) | `processed_object_keys`와 `load_traffic_rows`의 완료 파일·행 갱신 구분 | 트랜잭션·복구 조건은 [운영 절차](docs/runbook.md) 참조 |
+| 4 | [spark_runner.py](src/mobility_flow/spark_runner.py) | 처리 완료 파일 제외, 중복 제거, 적재·변환 실행 | [복구 시험 기록](docs/evidence/failure_drill_20260828.json) |
+| 5 | [api.py](src/mobility_flow/api.py) | `build_delivery_manifest`의 전달 조건과 상태 응답 | [전달 조건 테스트](tests/test_delivery_manifest.py) |
+| 6 | [dbt 모델](dbt/models) | 원천과 분석용 테이블, 데이터 품질 조건 | [데이터 계약](docs/data-contract.md) |
+
+파일별 책임과 테스트를 함께 읽을 수 있도록 연결했습니다. Python 단위 테스트 통과가 실제 PostgreSQL·Spark·dbt 통합 실행을 대신하지는 않습니다. 서비스 실행이 필요한 검증은 아래 실행·운영 절차와 보존된 근거를 구분해 확인해 주세요.
+
 ![MobilityFlow live operation](docs/mobilityflow-live.gif)
 
 > 실제 실행 전체 영상: [MP4 보기](docs/mobilityflow-live.mp4)
@@ -182,7 +202,7 @@ make check
 make failure-drill
 ```
 
-- Unit/contract test 27건
+- Unit/contract test 30건 (2026.09.17 로컬 재검증)
 - dbt data test 28건(서울 원천 전용 freshness 포함) + source freshness
 - Terraform fmt/init/validate
 - Docker Compose validation
